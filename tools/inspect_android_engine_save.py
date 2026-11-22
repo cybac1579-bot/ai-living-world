@@ -11,7 +11,7 @@ from pathlib import Path
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "src")
 ranges = {
-    "world_engine.py": ((1, 145), (170, 260), (360, 450), (525, 670)),
+    "world_engine.py": ((1, 145), (170, 260), (360, 525), (525, 670)),
     "vn_server.py": ((105, 130), (175, 225)),
 }
 for filename, spans in ranges.items():

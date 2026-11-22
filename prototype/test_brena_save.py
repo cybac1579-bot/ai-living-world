@@ -1,0 +1,61 @@
+"""Persistence regressions: backup, crash recovery, and no offline time skip."""
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from brena_simulation import BrenaWorld
+from brena_save import load_world, save_world
+
+
+class SaveTests(unittest.TestCase):
+    def test_roundtrip_and_no_time_progression(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            world = BrenaWorld.new(seed=9)
+            world.advance_time(120)
+            save_world(path, world)
+            self.assertEqual(load_world(path).to_json(), world.to_json())
+
+    def test_corrupt_primary_recovers_previous_valid_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            previous = BrenaWorld.new()
+            save_world(path, previous)
+            current = BrenaWorld.from_json(previous.to_json())
+            current.advance_time(60)
+            save_world(path, current)
+            path.write_text("{corrupt", encoding="utf-8")
+            self.assertEqual(load_world(path).to_json(), previous.to_json())
+
+    def test_interrupted_replace_keeps_original(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            previous = BrenaWorld.new()
+            save_world(path, previous)
+            newer = BrenaWorld.new(seed=2)
+            with patch("brena_save.os.replace", side_effect=OSError("simulated crash")):
+                with self.assertRaises(OSError):
+                    save_world(path, newer)
+            self.assertEqual(load_world(path).to_json(), previous.to_json())
+            self.assertFalse(list(Path(directory).glob(".alw-*.tmp")))
+
+    def test_bad_primary_does_not_overwrite_good_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            first = BrenaWorld.new(seed=1)
+            save_world(path, first)
+            save_world(path, BrenaWorld.new(seed=2))
+            path.write_text("invalid", encoding="utf-8")
+            save_world(path, BrenaWorld.new(seed=3))
+            self.assertEqual(load_world(path).seed, 3)
+            self.assertEqual(load_world(path.with_name("world.json.bak")).seed, 1)
+
+    def test_no_valid_save_is_error_not_silent_reset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                load_world(Path(directory) / "missing.json")
+
+
+if __name__ == "__main__":
+    unittest.main()

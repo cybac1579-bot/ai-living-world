@@ -116,10 +116,10 @@ jobs:
             {
               echo '### Android emulator host diagnostics'
               echo 'The emulator boot step failed; APK compilation status is separate.'
-              echo '\`\`\`text'
+              echo '```text'
               head -c 12000 "$RUNNER_TEMP/alw-emulator-host-diagnostics.txt" || true
               echo
-              echo '\`\`\`'
+              echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           exit 0

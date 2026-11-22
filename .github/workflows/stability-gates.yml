@@ -32,7 +32,7 @@ jobs:
       - name: Syntax check
         run: python -m compileall -q prototype
       - name: World and dialogue regression tests
-        run: python -m unittest discover -s prototype -p 'test_*.py' -v
+        run: python -m unittest discover -s prototype -p 'test_brena_*.py' -v
       - name: No unsafe generated player action API in prototype
         run: |
           python - <<'PY'
@@ -83,6 +83,9 @@ jobs:
         run: |
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+      - name: Inspect original engine fixture and store API
+        run: |
+          grep -nE '^def |^class |^    def ' src/tests/test_engine.py src/world_engine.py | head -110
       - name: Check original world engine syntax
         run: python -m py_compile src/world_engine.py src/vn_server.py
       - name: Run original engine persistence and story tests

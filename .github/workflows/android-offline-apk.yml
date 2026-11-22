@@ -1,0 +1,107 @@
+name: Android offline debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - source/AI_Living_World_Android_v1.3.zip
+      - .github/workflows/android-offline-apk.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build offline-only Android prototype
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out private repository
+        uses: actions/checkout@v4
+
+      - name: Unpack verified v1.3 development source
+        shell: bash
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          test -f src/android_native/app/build.gradle
+          test -f src/tools/android_build_preflight.py
+          test -f src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run source integrity and credential exclusion checks
+        run: python src/tools/android_build_preflight.py --root src
+
+      - name: Run all offline engine regression tests
+        working-directory: src
+        run: python -m unittest discover -s tests -q
+
+      - name: Disable ChatGPT login and online GPT in this prototype APK
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          java = Path("src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java")
+          s = java.read_text(encoding="utf-8")
+          before = 'login.setOnClickListener(v -> doLogin());'
+          assert s.count(before) == 1, 'Unexpected login button implementation'
+          s = s.replace(before, 'login.setOnClickListener(v -> uiError("오프라인 테스트 APK: 로그인 비활성화"));')
+          before = 'online.setOnClickListener(v -> startEngine(false));'
+          assert s.count(before) == 1, 'Unexpected GPT button implementation'
+          s = s.replace(before, 'online.setOnClickListener(v -> uiError("오프라인 테스트 APK: GPT 호출 비활성화"));')
+          before = 'bar.addView(offline,new LinearLayout.LayoutParams(0, 56, 1f));'
+          assert s.count(before) == 1, 'Unexpected button layout'
+          s = s.replace(before, 'login.setEnabled(false); online.setEnabled(false);\n        ' + before)
+          java.write_text(s, encoding="utf-8")
+
+          # No outdated Android native cryptography libraries ship in the offline-only APK.
+          gradle = Path("src/android_native/app/build.gradle")
+          g = gradle.read_text(encoding="utf-8")
+          for dep in ("install 'PyJWT[crypto]==2.15.1'", "install 'cryptography==42.0.8'", "install 'cffi==1.17.1'"):
+              assert g.count(dep) == 1, f"Unexpected dependency: {dep}"
+          g = g.replace("install 'PyJWT[crypto]==2.15.1'", "install 'PyJWT==2.15.1'")
+          g = g.replace("install 'cryptography==42.0.8'", "// Omitted: login disabled in offline-only APK")
+          g = g.replace("install 'cffi==1.17.1'", "// Omitted: login disabled in offline-only APK")
+          gradle.write_text(g, encoding="utf-8")
+          assert "login.setEnabled(false); online.setEnabled(false);" in java.read_text(encoding="utf-8")
+          assert "install 'cryptography==" not in gradle.read_text(encoding="utf-8")
+          print("OFFLINE_ONLY_MODE=enabled; no live ChatGPT authentication available in this APK")
+          PY
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android 36 SDK
+        shell: bash
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Set up Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Assemble offline debug APK
+        shell: bash
+        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Verify generated APK structure and checksum
+        run: python src/tools/verify_debug_apk.py src/android_native/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload prototype APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Living-World-OFFLINE-debug-apk
+          path: src/android_native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

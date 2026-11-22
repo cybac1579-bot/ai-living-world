@@ -37,6 +37,12 @@ jobs:
       - name: Run source integrity and credential exclusion checks
         run: python src/tools/android_build_preflight.py --root src
 
+      - name: Install Python test dependencies (CI runner only)
+        run: python -m pip install --disable-pip-version-check -r src/requirements.txt
+
+      - name: Restore non-secret historical regression fixture
+        run: cp ci-fixtures/legacy_v071_events.jsonl src/tests/fixtures/legacy_v071_save/events.jsonl
+
       - name: Run all offline engine regression tests
         working-directory: src
         run: python -m unittest discover -s tests -q

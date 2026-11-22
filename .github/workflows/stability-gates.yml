@@ -167,7 +167,7 @@ jobs:
               # Chaquopy often packs Python source into nested zip assets.
               nested=[]
               for name in python_assets:
-                  if not name.endswith('.zip'):
+                  if not name.endswith(('.zip', '.imy')):
                       continue
                   from io import BytesIO
                   with ZipFile(BytesIO(z.read(name))) as inner:

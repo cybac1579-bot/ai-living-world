@@ -14,6 +14,8 @@ permissions:
 jobs:
   build:
     name: Build offline-only Android prototype
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -104,10 +106,19 @@ jobs:
       - name: Verify generated APK structure and checksum
         run: python src/tools/verify_debug_apk.py src/android_native/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload prototype APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AI-Living-World-OFFLINE-debug-apk
-          path: src/android_native/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+      - name: Publish offline-only APK to private prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="offline-debug-${GITHUB_SHA:0:12}"
+          apk="src/android_native/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          sha256sum "$apk"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$apk#AI-Living-World-OFFLINE-debug.apk" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" "$apk#AI-Living-World-OFFLINE-debug.apk" --repo "$GITHUB_REPOSITORY" --title "Offline Android debug APK - $tag" --notes "TEST BUILD ONLY. ChatGPT login and online model calls are disabled. Not tested on a real Android device. Offline demo UI / local save only." --prerelease
+          fi
+          echo "PRIVATE_RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"

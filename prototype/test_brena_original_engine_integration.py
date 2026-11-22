@@ -44,8 +44,7 @@ class OriginalEngineIntegrationTests(unittest.TestCase):
         npc_id = next(iter(state["npcs"]))
         origin = state["npcs"][npc_id]["location"]
         adjacent = state["regions"][origin].get("neighbors", [])
-        if not adjacent:
-            self.skipTest("Original fixture has no adjacent NPC region")
+        self.assertTrue(adjacent, "Original fixture needs adjacent NPC region; integration must run")
         world.residents["rana"].place = "chief_house"
         candidates = movement_candidates(
             world, state,
@@ -59,10 +58,17 @@ class OriginalEngineIntegrationTests(unittest.TestCase):
             store = EventStore(Path(directory))
             store.create(state)
             committed = store.commit(0, None, {"events": candidates}, mode="npc_tick")
+            journal = Path(directory) / "events.jsonl"
+            self.assertTrue(journal.exists())
+            self.assertIn("npc_move", journal.read_text(encoding="utf-8"))
+            cache = Path(directory) / "state.json"
+            if cache.exists():
+                cache.unlink()  # prove journal replay, not a cached state read
             reloaded = EventStore(Path(directory)).load()
             self.assertEqual(committed, reloaded)
             self.assertEqual(reloaded["npcs"][npc_id]["location"], adjacent[0])
             self.assertEqual(reloaded["player"]["location"], player_before)
+            self.assertEqual(reloaded.get("player_action_history"), state.get("player_action_history"))
             self.assertEqual(reloaded["revision"], 1)
 
 

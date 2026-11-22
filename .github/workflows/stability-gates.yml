@@ -9,6 +9,7 @@ on:
       - 'prototype/**'
       - 'tools/inspect_android_integration.py'
       - 'tools/inspect_android_engine_save.py'
+      - 'tools/stage_brena_android.py'
       - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
       - '.github/workflows/stability-gates.yml'
   workflow_dispatch:
@@ -86,6 +87,19 @@ jobs:
       - name: Inspect original engine fixture and store API
         run: |
           grep -nE '^def |^class |^    def ' src/tests/test_engine.py src/world_engine.py | head -110
+      - name: Stage Brena Python modules into Android source and smoke-import
+        run: |
+          python tools/stage_brena_android.py src
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          from brena_event_adapter import movement_candidates
+          from world_engine import EventStore
+          world = BrenaWorld.new()
+          assert npc_view(world, 'rana').npc_id == 'rana'
+          assert EventStore is not None
+          print('BRENA_ANDROID_STAGING=PASS')
+          PY
       - name: Check original world engine syntax
         run: python -m py_compile src/world_engine.py src/vn_server.py
       - name: Run original engine persistence and story tests

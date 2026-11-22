@@ -7,6 +7,8 @@ on:
       - .github/workflows/android-runtime-emulator.yml
       - tools/android_emulator_smoke.sh
       - tools/patch_android_startup_diagnostics.py
+      - tools/patch_android_presentation_ui.py
+      - tools/patch_android_debug_ui.py
   workflow_dispatch:
 
 permissions:
@@ -49,6 +51,7 @@ jobs:
           PY
           python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+          python tools/patch_android_presentation_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

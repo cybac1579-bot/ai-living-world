@@ -88,3 +88,7 @@ jobs:
       - name: Run original engine persistence and story tests
         working-directory: src
         run: python -m unittest discover -s tests -p 'test_engine.py' -v
+      - name: Run Brena event journal integration smoke
+        env:
+          PYTHONPATH: src:prototype
+        run: python -m unittest discover -s prototype -p 'test_brena_original_engine_integration.py' -v

@@ -49,6 +49,11 @@ jobs:
           PY
           python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Confirm Chaquopy build Python available
+        run: python --version && command -v python
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

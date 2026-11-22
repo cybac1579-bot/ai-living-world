@@ -9,13 +9,35 @@ import os
 from pathlib import Path
 import tempfile
 
-from brena_simulation import BrenaWorld
+from brena_simulation import BrenaWorld, PLACES, ACTIVITIES
 
 
 def _validated(payload: str) -> BrenaWorld:
     world = BrenaWorld.from_json(payload)
-    if not world.residents or "rana" not in world.residents:
+    if not isinstance(world.seed, int) or isinstance(world.seed, bool):
+        raise ValueError("invalid seed")
+    if not isinstance(world.day, int) or isinstance(world.day, bool) or world.day < 1:
+        raise ValueError("invalid day")
+    if not isinstance(world.minute, int) or isinstance(world.minute, bool) or not 0 <= world.minute < 1440:
+        raise ValueError("invalid minute")
+    if not isinstance(world.tick_index, int) or isinstance(world.tick_index, bool) or world.tick_index < 0:
+        raise ValueError("invalid tick index")
+    if not isinstance(world.residents, dict) or "rana" not in world.residents:
         raise ValueError("incomplete world save")
+    for key, resident in world.residents.items():
+        if resident.key != key or not isinstance(resident.memories, list):
+            raise ValueError("invalid resident identity or memories")
+        if not all(isinstance(memory, str) for memory in resident.memories):
+            raise ValueError("invalid resident memory")
+        if resident.place not in PLACES or not isinstance(resident.activity, str):
+            raise ValueError("invalid resident location or activity")
+    if not isinstance(world.relations, dict) or not isinstance(world.events, list):
+        raise ValueError("invalid relationship or event data")
+    for event in world.events:
+        if not isinstance(event, dict) or not {"day", "minute", "actor", "subject", "detail"} <= event.keys():
+            raise ValueError("invalid event record")
+        if not isinstance(event["detail"], str):
+            raise ValueError("invalid event detail")
     return world
 
 
@@ -45,11 +67,12 @@ def save_world(path: str | Path, world: BrenaWorld) -> None:
     backup = primary.with_name(primary.name + ".bak")
     if primary.exists():
         try:
-            _validated(primary.read_text(encoding="utf-8"))
+            previous_payload = primary.read_text(encoding="utf-8")
+            _validated(previous_payload)
         except (OSError, UnicodeError, ValueError, KeyError, TypeError):
             pass
         else:
-            _atomic_write(backup, primary.read_text(encoding="utf-8"))
+            _atomic_write(backup, previous_payload)
     _atomic_write(primary, payload)
 
 

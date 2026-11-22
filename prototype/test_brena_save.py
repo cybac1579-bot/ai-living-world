@@ -1,4 +1,5 @@
 """Persistence regressions: backup, crash recovery, and no offline time skip."""
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -50,6 +51,26 @@ class SaveTests(unittest.TestCase):
             save_world(path, BrenaWorld.new(seed=3))
             self.assertEqual(load_world(path).seed, 3)
             self.assertEqual(load_world(path.with_name("world.json.bak")).seed, 1)
+
+    def test_structurally_invalid_primary_falls_back_to_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            previous = BrenaWorld.new(seed=10)
+            save_world(path, previous)
+            save_world(path, BrenaWorld.new(seed=11))
+            corrupted = json.loads(path.read_text(encoding="utf-8"))
+            corrupted["residents"]["rana"]["place"] = "nonexistent_location"
+            path.write_text(json.dumps(corrupted), encoding="utf-8")
+            self.assertEqual(load_world(path).seed, 10)
+
+    def test_invalid_snapshot_rejected_before_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            world = BrenaWorld.new()
+            world.residents["rana"].place = "unknown"
+            with self.assertRaises(ValueError):
+                save_world(path, world)
+            self.assertFalse(path.exists())
 
     def test_no_valid_save_is_error_not_silent_reset(self):
         with tempfile.TemporaryDirectory() as directory:

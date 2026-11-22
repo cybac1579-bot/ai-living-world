@@ -23,18 +23,24 @@ MODULES = (
 def stage(prototype: Path, android_src: Path) -> list[Path]:
     if not (android_src / "world_engine.py").is_file():
         raise FileNotFoundError("original world_engine.py must exist in Android source")
+    packaged_python = android_src / "android_native/app/src/main/python"
+    if not (packaged_python / "world_engine.py").is_file():
+        raise FileNotFoundError("Chaquopy packaged Python source must contain world_engine.py")
     outputs = []
     for name in MODULES:
         origin = prototype / name
-        target = android_src / name
         if not origin.is_file():
             raise FileNotFoundError(origin)
-        if target.exists():
-            if target.read_bytes() != origin.read_bytes():
-                raise FileExistsError(f"refusing to overwrite existing Android module: {name}")
-        else:
-            shutil.copyfile(origin, target)
-        outputs.append(target)
+        # Root copy supports original-engine tests; nested copy is packaged by
+        # Chaquopy into the actual Android APK.
+        for directory in (android_src, packaged_python):
+            target = directory / name
+            if target.exists():
+                if target.read_bytes() != origin.read_bytes():
+                    raise FileExistsError(f"refusing to overwrite existing Android module: {name}")
+            else:
+                shutil.copyfile(origin, target)
+            outputs.append(target)
     return outputs
 
 

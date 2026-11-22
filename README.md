@@ -29,3 +29,14 @@ Canonical development archive and verification logs are backed up in the owner's
 **Security boundary:** The CI workflow disables the Android login and GPT-play buttons before compilation and omits outdated native cryptography wheels. This APK is an **offline UI / local-save debug prototype only**, not a working ChatGPT login client. A real Galaxy S25+ installation and run have not yet been verified. Do not enter sensitive information into a debug build.
 
 GitHub Actions artifact storage quota was exhausted, so the APK is delivered through a private GitHub prerelease rather than an Actions artifact.
+
+## Hardened offline Android build (2026-11-22)
+
+**CI verification: PASS** on commit `7c3938d9a072` ([run #4](https://github.com/cybac1579-bot/ai-living-world/actions/runs/45033035173)).
+
+- The source passes its offline regression tests and compiles into a debug APK.
+- The CI build strips `android.permission.INTERNET` and `android.permission.ACCESS_NETWORK_STATE` from the offline-only variant, blocks transitive manifest additions, and checks the **final packaged APK** with Android build tools before publishing.
+- [Latest hardened offline-only APK in private prerelease](https://github.com/cybac1579-bot/ai-living-world/releases/tag/offline-debug-7c3938d9a072) (`app-debug.apk`, 24,491,996 bytes).
+- [Galaxy S25+ device smoke-test checklist (Korean)](docs/android-device-smoke-test-ko.md).
+- Real-device installation, persistence, user-interface usability, and online GPT authentication are **not yet verified**. The debug build must not be used for sensitive information.
+

@@ -24,12 +24,16 @@ root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-ui.xml').getroot()
 texts=[el.get('text','') for el in root.iter() if el.get('text')]
 for line in texts:
     print(line[:350])
-assert any('진단 D4' in t for t in texts), 'Native diagnostic banner not visible: app may have crashed or screen is blank'
+assert not any('진단 D4' in t for t in texts), 'Debug diagnostics should be hidden in presentation mode after startup'
 assert not any('오류 단계' in t or 'WebView 오류' in t for t in texts), 'The app reports a Python/server/WebView startup error'
-assert any('단계 5' in t for t in texts), 'Local WebView page did not finish loading'
-print('EMULATOR_NATIVE_UI_AND_LOCAL_PAGE=PASS')
+print('EMULATOR_PRESENTATION_UI=PASS (diagnostic chrome hidden; visual content still requires screenshot review)')
 PY
 
+if ! grep -Fq 'WebView pageFinished' "$RUNNER_TEMP/alw-startup-log.txt"; then
+  echo "::error::Embedded WebView did not report pageFinished"
+  exit 1
+fi
+echo "EMULATOR_WEBVIEW_PAGE_FINISHED=PASS (does not prove scene rendering)"
 if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEMP/alw-startup-log.txt"; then
   echo "::error::Android app process crashed"
   exit 1

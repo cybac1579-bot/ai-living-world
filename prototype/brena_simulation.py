@@ -89,7 +89,8 @@ class BrenaWorld:
     def _npc_tick(self, *, clock_hour: int, rainy: bool, request_pending: bool) -> None:
         rng = random.Random(f"{self.seed}:{self.tick_index}")
         rana = self.residents["rana"]
-        # Use in-world clock, not elapsed ticks since starting a save.\n        # First tick after the default 08:00 start must not force bedtime.\n        clock_hour = ((self.minute + self.tick_index * 60) // 60) % 24\n        if clock_hour in (0, 1, 2, 3, 4, 5):
+        # Sleep is based on the actual simulation hour, not elapsed tick count.
+        if clock_hour in (0, 1, 2, 3, 4, 5):
             activity = "personal_rest"
         else:
             weights = [3, 3, 2, 2, 2]

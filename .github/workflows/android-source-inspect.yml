@@ -34,6 +34,10 @@ jobs:
             'android_native/app/src/main/AndroidManifest.xml',
             'android_native/app/build.gradle',
             'android_native/app/src/main/python/mobile_embedded.py',
+            'android_native/app/src/main/python/siwc_client.py',
+            'android_native/app/src/main/python/live_story.py',
+            'android_native/app/src/main/python/vn_server.py',
+            'android_native/app/src/main/python/ai_adapter.py',
             'android_native/app/src/main/res/xml/network_security_config.xml',
           ]
           for path in targets:

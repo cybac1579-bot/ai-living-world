@@ -1,0 +1,29 @@
+# Secrets and authentication data
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.pem
+.siwc-*
+.env
+.env.*
+!*.env.example
+# Local world saves and backups
+my_demo_save/
+local_save/
+saves/
+*.jsonl
+!ci-fixtures/*.jsonl
+# Python and Android generated files
+__pycache__/
+*.pyc
+.venv/
+.gradle/
+build/
+.android/
+local.properties
+*.apk
+*.aab
+# Editors
+.idea/
+.vscode/

@@ -7,6 +7,7 @@ on:
     branches: ['development/**']
     paths:
       - 'prototype/**'
+      - 'tools/inspect_android_integration.py'
       - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
       - '.github/workflows/stability-gates.yml'
   workflow_dispatch:
@@ -45,3 +46,25 @@ jobs:
           PY
         env:
           PYTHONPATH: prototype
+
+  android-source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Inspect existing Android engine integration points
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/inspect_android_integration.py src | tee android-integration-inventory.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("android-integration-inventory.json").read_text())
+          paths=data["candidate_files"]
+          assert paths, "No Android source integration points found"
+          print("ANDROID_SOURCE_INVENTORY=PASS", len(paths), "candidate files")
+          PY

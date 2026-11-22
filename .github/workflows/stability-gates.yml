@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [development/stability-gates-20261123]
+    branches: ['development/**']
     paths:
       - 'prototype/**'
       - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'

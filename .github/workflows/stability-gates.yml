@@ -8,6 +8,7 @@ on:
     paths:
       - 'prototype/**'
       - 'tools/inspect_android_integration.py'
+      - 'tools/inspect_android_engine_save.py'
       - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
       - '.github/workflows/stability-gates.yml'
   workflow_dispatch:
@@ -60,6 +61,7 @@ jobs:
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
           python tools/inspect_android_integration.py src | tee android-integration-inventory.json
+          python tools/inspect_android_engine_save.py src
           python - <<'PY'
           import json
           from pathlib import Path

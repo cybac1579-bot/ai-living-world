@@ -152,3 +152,26 @@ jobs:
         run: |
           test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk
           ls -lh src/android_native/app/build/outputs/apk/debug/app-debug.apk
+      - name: Audit whether staged Brena modules are actually packaged in APK
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk=Path('src/android_native/app/build/outputs/apk/debug/app-debug.apk')
+          with ZipFile(apk) as z:
+              entries=z.namelist()
+              python_assets=[name for name in entries if 'python' in name.lower() or 'chaquopy' in name.lower()]
+              print('PYTHON_APK_ASSETS', python_assets[:80])
+              matched=[name for name in entries if 'brena' in name.lower()]
+              print('BRENA_APK_ENTRIES', matched)
+              # Chaquopy often packs Python source into nested zip assets.
+              nested=[]
+              for name in python_assets:
+                  if not name.endswith('.zip'):
+                      continue
+                  from io import BytesIO
+                  with ZipFile(BytesIO(z.read(name))) as inner:
+                      nested.extend(x for x in inner.namelist() if 'brena' in x.lower())
+              print('BRENA_NESTED_PYTHON_ENTRIES', nested)
+              assert matched or nested, 'APK does not package staged Brena modules'
+          PY

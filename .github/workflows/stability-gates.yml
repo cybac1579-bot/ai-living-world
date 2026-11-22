@@ -13,6 +13,7 @@ on:
       - 'tools/patch_brena_vn_state.py'
       - 'tools/inspect_android_clock.py'
       - 'tools/inspect_android_vn_view.py'
+      - 'tools/inspect_android_vn_js.py'
       - 'tools/patch_android_debug_ui.py'
       - 'tools/patch_android_startup_diagnostics.py'
       - 'tools/patch_android_presentation_ui.py'
@@ -71,6 +72,7 @@ jobs:
           python tools/inspect_android_engine_save.py src
           python tools/inspect_android_clock.py src
           python tools/inspect_android_vn_view.py src
+          python tools/inspect_android_vn_js.py src
           python - <<'PY'
           import json
           from pathlib import Path

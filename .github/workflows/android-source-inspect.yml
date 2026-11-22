@@ -33,6 +33,8 @@ jobs:
             'android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java',
             'android_native/app/src/main/AndroidManifest.xml',
             'android_native/app/build.gradle',
+            'android_native/app/src/main/python/mobile_embedded.py',
+            'android_native/app/src/main/res/xml/network_security_config.xml',
           ]
           for path in targets:
             p=base/path

@@ -154,7 +154,7 @@ jobs:
           test -x "$aapt"
           "$aapt" dump permissions "$apk" > "$RUNNER_TEMP/alw-apk-permissions.txt"
           cat "$RUNNER_TEMP/alw-apk-permissions.txt"
-          if grep -Eq 'android\\.permission\\.(INTERNET|ACCESS_NETWORK_STATE)' "$RUNNER_TEMP/alw-apk-permissions.txt"; then
+          if grep -Eq 'android\.permission\.(INTERNET|ACCESS_NETWORK_STATE)' "$RUNNER_TEMP/alw-apk-permissions.txt"; then
             echo "::error::Offline APK unexpectedly requests network permissions"
             exit 1
           fi

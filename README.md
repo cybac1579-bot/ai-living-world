@@ -30,13 +30,17 @@ Canonical development archive and verification logs are backed up in the owner's
 
 GitHub Actions artifact storage quota was exhausted, so the APK is delivered through a private GitHub prerelease rather than an Actions artifact.
 
-## Hardened offline Android build (2026-11-22)
+## Galaxy S25+ offline startup fix (2026-11-22)
 
-**CI verification: PASS** on commit `7c3938d9a072` ([run #4](https://github.com/cybac1579-bot/ai-living-world/actions/runs/45033035173)).
+**Important correction:** The previous offline-only debug build `offline-debug-7c3938d9a072` removed the Android `INTERNET` permission. That permission is still **required to open sockets on 127.0.0.1**, even when the app runs without external online services. On a real device, the app could therefore fail to start its own local interface server and show a generic Android runtime/auth/resource error.
 
-- The source passes its offline regression tests and compiles into a debug APK.
-- The CI build strips `android.permission.INTERNET` and `android.permission.ACCESS_NETWORK_STATE` from the offline-only variant, blocks transitive manifest additions, and checks the **final packaged APK** with Android build tools before publishing.
-- [Latest hardened offline-only APK in private prerelease](https://github.com/cybac1579-bot/ai-living-world/releases/tag/offline-debug-7c3938d9a072) (`app-debug.apk`, 24,491,996 bytes).
-- [Galaxy S25+ device smoke-test checklist (Korean)](docs/android-device-smoke-test-ko.md).
-- Real-device installation, persistence, user-interface usability, and online GPT authentication are **not yet verified**. The debug build must not be used for sensitive information.
+The corrected debug build:
+- Keeps `android.permission.INTERNET` for the private loopback HTTP server, and checks that permission in the assembled APK.
+- Binds the embedded HTTP engine only to `127.0.0.1` and retains the explicit cleartext exception for that host.
+- Keeps ChatGPT login and online GPT controls disabled; offline demo starts without credentials or a token. **Android's INTERNET permission is not a general OS-level outbound-network firewall:** this is an application-level offline-mode restriction.
+- Converts native toolbar/status height from raw pixels to density-independent dp and applies Android 15+ safe-area insets to prevent cropped buttons and error text on high-density devices.
+- Continues running offline engine regression tests in CI.
 
+[Latest corrected debug APK](https://github.com/cybac1579-bot/ai-living-world/releases/tag/offline-debug-14028108f0e5) | [Build run](https://github.com/cybac1579-bot/ai-living-world/actions/runs/45033924393) | [On-device checklist](docs/android-device-smoke-test-ko.md)
+
+**Status:** compilation and APK permission checks passed in the corrected build. Real Galaxy S25+ startup and save behavior still need device verification. Do not enter credentials or sensitive information into this prototype. The original v1.3 ZIP remains a baseline; debug-only patches are applied to an unpacked CI working copy.

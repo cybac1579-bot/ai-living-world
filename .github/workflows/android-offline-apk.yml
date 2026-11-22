@@ -81,43 +81,23 @@ jobs:
           print("OFFLINE_ONLY_MODE=enabled; no live ChatGPT authentication available in this APK")
           PY
 
-      - name: Strip internet access from offline debug manifest
+      - name: Verify local-only offline engine contract
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import xml.etree.ElementTree as ET
 
-          manifest = Path("src/android_native/app/src/main/AndroidManifest.xml")
-          assert manifest.is_file(), "Android manifest not found"
-          android_ns = "http://schemas.android.com/apk/res/android"
-          tools_ns = "http://schemas.android.com/tools"
-          ET.register_namespace("android", android_ns)
-          ET.register_namespace("tools", tools_ns)
-          tree = ET.parse(manifest)
-          root = tree.getroot()
-          assert root.tag == "manifest", "Unexpected Android manifest root"
-
-          forbidden = {
-              "android.permission.INTERNET",
-              "android.permission.ACCESS_NETWORK_STATE",
-          }
-          # Remove any app-declared network permissions.
-          for node in list(root):
-              if node.tag in ("uses-permission", "uses-permission-sdk-23"):
-                  if node.get(f"{{{android_ns}}}name") in forbidden:
-                      root.remove(node)
-
-          # Also prevent transitive library manifests from restoring them.
-          for name in sorted(forbidden):
-              node = ET.Element("uses-permission")
-              node.set(f"{{{android_ns}}}name", name)
-              node.set(f"{{{tools_ns}}}node", "remove")
-              root.insert(0, node)
-
-          tree.write(manifest, encoding="utf-8", xml_declaration=True)
-          ET.parse(manifest)
-          print("OFFLINE_MANIFEST=network_permissions_removed")
+          java = Path('src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java').read_text(encoding='utf-8')
+          py = Path('src/android_native/app/src/main/python/mobile_embedded.py').read_text(encoding='utf-8')
+          manifest = Path('src/android_native/app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
+          network = Path('src/android_native/app/src/main/res/xml/network_security_config.xml').read_text(encoding='utf-8')
+          assert 'startEngine(true);' in java, 'initial screen must start in offline mode'
+          assert 'login.setEnabled(false); online.setEnabled(false);' in java, 'online buttons must be disabled'
+          assert "if offline:\n            token,models = None, []" in py, 'offline mode unexpectedly requests authentication'
+          assert "('127.0.0.1',0)" in py, 'offline server must bind loopback only'
+          assert 'android.permission.INTERNET' in manifest, 'Android loopback sockets REQUIRE INTERNET permission'
+          assert '<domain>127.0.0.1</domain>' in network, 'cleartext loopback exception missing'
+          print('OFFLINE_LOOPBACK_CONTRACT=PASS; online account access disabled in this build')
           PY
 
       - name: Install Java 21
@@ -145,7 +125,7 @@ jobs:
       - name: Verify generated APK structure and checksum
         run: python src/tools/verify_debug_apk.py src/android_native/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Verify packaged APK has no internet permission
+      - name: Verify packaged APK permits required loopback networking
         shell: bash
         run: |
           set -euo pipefail
@@ -154,11 +134,11 @@ jobs:
           test -x "$aapt"
           "$aapt" dump permissions "$apk" > "$RUNNER_TEMP/alw-apk-permissions.txt"
           cat "$RUNNER_TEMP/alw-apk-permissions.txt"
-          if grep -Eq 'android\.permission\.(INTERNET|ACCESS_NETWORK_STATE)' "$RUNNER_TEMP/alw-apk-permissions.txt"; then
-            echo "::error::Offline APK unexpectedly requests network permissions"
+          if ! grep -Fq 'android.permission.INTERNET' "$RUNNER_TEMP/alw-apk-permissions.txt"; then
+            echo "::error::The embedded 127.0.0.1 server needs Android INTERNET permission."
             exit 1
           fi
-          echo "OFFLINE_APK_NETWORK_PERMISSION_CHECK=PASS"
+          echo "OFFLINE_LOOPBACK_PERMISSION_CHECK=PASS"
 
       - name: Publish offline-only APK to private prerelease
         shell: bash

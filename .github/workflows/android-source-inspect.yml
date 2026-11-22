@@ -1,0 +1,51 @@
+name: Inspect Android startup source
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/android-source-inspect.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract Android runtime source for diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/alw-source
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d /tmp/alw-source
+          python /tmp/alw-source/tools/android_build_preflight.py --root /tmp/alw-source
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+
+          base=Path('/tmp/alw-source')
+          out=Path('diagnostics/runtime-source')
+          out.mkdir(parents=True, exist_ok=True)
+          files=sorted(p for p in base.rglob('*') if p.is_file())
+          (out/'source-index.txt').write_text('\n'.join(str(p.relative_to(base)) for p in files)+'\n',encoding='utf-8')
+          targets=[
+            'android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java',
+            'android_native/app/src/main/AndroidManifest.xml',
+            'android_native/app/build.gradle',
+          ]
+          for path in targets:
+            p=base/path
+            assert p.exists(), f'missing {path}'
+            dest=out/p.name
+            shutil.copy2(p,dest)
+          print('SOURCE_AUDIT=',len(files),'files')
+          PY
+      - name: Commit sanitized Android source inspection files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add diagnostics/runtime-source
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Expose Android startup source for device crash diagnosis"
+          git push origin HEAD:main

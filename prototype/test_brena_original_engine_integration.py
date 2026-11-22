@@ -6,6 +6,7 @@ No player action is submitted, and no existing user store is opened.
 from __future__ import annotations
 
 import tempfile
+import json
 import unittest
 from pathlib import Path
 
@@ -23,8 +24,19 @@ class OriginalEngineIntegrationTests(unittest.TestCase):
     def test_movement_candidate_commits_and_replays(self):
         # The original Android source includes test fixtures; use its own
         # validated initial state, not an invented engine schema.
-        from tests.test_engine import sample_state
-        state = sample_state()
+        import world_engine
+        example_dir = Path(world_engine.__file__).resolve().parent / 'examples'
+        states = []
+        for fixture in sorted(example_dir.glob('*.json')):
+            try:
+                candidate = json.loads(fixture.read_text(encoding='utf-8'))
+                validate_state(candidate)
+                if candidate['revision'] == 0:
+                    states.append(candidate)
+            except (ValueError, KeyError, TypeError):
+                continue
+        self.assertTrue(states, 'No valid revision-zero original engine fixture found')
+        state = states[0]
         validate_state(state)
         world = BrenaWorld.new(seed=3)
         # A known NPC and a registered adjacent region from the original

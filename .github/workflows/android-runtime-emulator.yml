@@ -1,0 +1,77 @@
+name: Android runtime emulator smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/android-runtime-emulator.yml
+      - tools/android_emulator_smoke.sh
+      - tools/patch_android_startup_diagnostics.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    name: Launch offline world on Android x86_64 emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack source and prepare offline-only emulator variant
+        shell: bash
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python - <<'PY'
+          from pathlib import Path
+          java=Path('src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java')
+          s=java.read_text(encoding='utf-8')
+          a='login.setOnClickListener(v -> doLogin());'
+          b='online.setOnClickListener(v -> startEngine(false));'
+          c='bar.addView(offline,new LinearLayout.LayoutParams(0, 56, 1f));'
+          assert s.count(a)==s.count(b)==s.count(c)==1
+          s=s.replace(a, 'login.setOnClickListener(v -> uiError("오프라인: 로그인 차단"));')
+          s=s.replace(b, 'online.setOnClickListener(v -> uiError("오프라인: GPT 차단"));')
+          s=s.replace(c, 'login.setEnabled(false); online.setEnabled(false);\n        '+c)
+          java.write_text(s,encoding='utf-8')
+          gradle=Path('src/android_native/app/build.gradle')
+          g=gradle.read_text(encoding='utf-8')
+          assert g.count("abiFilters 'arm64-v8a'")==1
+          assert g.count("install 'PyJWT[crypto]==2.15.1'")==1
+          for dep in ("install 'cryptography==42.0.8'","install 'cffi==1.17.1'"):
+              assert g.count(dep)==1
+              g=g.replace(dep, '// omitted in offline-only emulator')
+          g=g.replace("install 'PyJWT[crypto]==2.15.1'","install 'PyJWT==2.15.1'")
+          g=g.replace("abiFilters 'arm64-v8a'","abiFilters 'x86_64'")
+          gradle.write_text(g,encoding='utf-8')
+          PY
+          python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+          python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - name: Install compile SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Compile x86_64 debug APK for emulator
+        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+      - name: Enable KVM for emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot Android 15 emulator and check local world startup
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: bash tools/android_emulator_smoke.sh

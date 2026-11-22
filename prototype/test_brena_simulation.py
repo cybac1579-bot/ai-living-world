@@ -59,6 +59,16 @@ class BrenaSimulationTests(unittest.TestCase):
             b.advance_time(60)
         self.assertEqual(a.to_json(), b.to_json())
 
+    def test_explicit_player_interaction_is_remembered(self):
+        world = BrenaWorld.new()
+        world.record_event("player", "rana", "player offered to help")
+        self.assertEqual(world.residents["rana"].memories, ["player offered to help"])
+        self.assertEqual(len(world.events), 1)
+        loaded = BrenaWorld.from_json(world.to_json())
+        self.assertEqual(loaded.events, world.events)
+        loaded.advance_time(24 * 60)
+        self.assertEqual(len(loaded.events), 1)  # no invented player events
+
     def test_reject_invalid_time(self):
         world = BrenaWorld.new()
         for value in (-1, 1.5, True):

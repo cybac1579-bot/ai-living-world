@@ -2,13 +2,15 @@ name: Android runtime emulator smoke
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'development/stability-gates-20261123']
     paths:
       - .github/workflows/android-runtime-emulator.yml
       - tools/android_emulator_smoke.sh
       - tools/patch_android_startup_diagnostics.py
       - tools/patch_android_presentation_ui.py
       - tools/patch_android_debug_ui.py
+      - tools/stage_brena_android.py
+      - prototype/**
   workflow_dispatch:
 
 permissions:
@@ -26,6 +28,13 @@ jobs:
         run: |
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_android.py src
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          assert npc_view(BrenaWorld.new(), 'rana').npc_id == 'rana'
+          print('BRENA_APK_SOURCE_STAGED=PASS')
+          PY
           python - <<'PY'
           from pathlib import Path
           java=Path('src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java')

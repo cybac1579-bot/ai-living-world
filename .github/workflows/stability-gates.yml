@@ -11,6 +11,7 @@ on:
       - 'tools/inspect_android_engine_save.py'
       - 'tools/stage_brena_android.py'
       - 'tools/inspect_android_clock.py'
+      - 'tools/inspect_android_vn_view.py'
       - 'tools/patch_android_debug_ui.py'
       - 'tools/patch_android_startup_diagnostics.py'
       - 'tools/patch_android_presentation_ui.py'
@@ -68,6 +69,7 @@ jobs:
           python tools/inspect_android_integration.py src | tee android-integration-inventory.json
           python tools/inspect_android_engine_save.py src
           python tools/inspect_android_clock.py src
+          python tools/inspect_android_vn_view.py src
           python - <<'PY'
           import json
           from pathlib import Path

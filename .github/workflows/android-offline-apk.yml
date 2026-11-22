@@ -7,6 +7,7 @@ on:
     paths:
       - source/AI_Living_World_Android_v1.3.zip
       - .github/workflows/android-offline-apk.yml
+      - tools/patch_android_debug_ui.py
 
 permissions:
   contents: read
@@ -80,6 +81,9 @@ jobs:
           assert "install 'cryptography==" not in gradle.read_text(encoding="utf-8")
           print("OFFLINE_ONLY_MODE=enabled; no live ChatGPT authentication available in this APK")
           PY
+
+      - name: Fix high-density Android debug toolbar and error visibility
+        run: python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
 
       - name: Verify local-only offline engine contract
         shell: bash

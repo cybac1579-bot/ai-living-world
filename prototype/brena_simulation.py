@@ -115,14 +115,16 @@ class BrenaWorld:
                 resident.activity = "village_duties"
 
     def record_event(self, actor: str, subject: str, detail: str) -> None:
-        if actor not in self.residents or subject not in self.residents:
+        known = set(self.residents) | {"player"}
+        if actor not in known or subject not in known:
             raise KeyError("event participants must exist")
         self.events.append({
             "day": self.day, "minute": self.minute,
             "actor": actor, "subject": subject, "detail": detail,
         })
         for key in {actor, subject}:
-            self.residents[key].memories.append(detail)
+            if key in self.residents:
+                self.residents[key].memories.append(detail)
 
     def set_relation(self, person_a: str, person_b: str, **state: Any) -> None:
         """Directional relation state. No single global spouse/partner slot."""

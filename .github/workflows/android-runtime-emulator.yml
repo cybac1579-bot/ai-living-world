@@ -88,6 +88,22 @@ jobs:
           emulator-boot-timeout: 900
           disable-animations: true
           script: bash tools/android_emulator_smoke.sh
+      # The emulator runner can fail before the smoke script executes. Capture
+      # host-side evidence even when there is no adb device or screenshot.
+      - name: Capture emulator boot failure evidence
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo "== UTC time =="; date -u
+            echo "== adb devices =="; adb devices -l || true
+            echo "== KVM =="; ls -l /dev/kvm || true
+            echo "== memory =="; free -h || true
+            echo "== disk =="; df -h / || true
+            echo "== emulator processes =="; ps -ef | grep -E '[e]mulator|[q]emu|[a]db' || true
+            echo "== emulator log candidates =="; find "$HOME/.android" /tmp -maxdepth 3 -type f \\( -iname '*emulator*.log' -o -iname '*qemu*.log' \\) -print 2>/dev/null | head -40 || true
+          } > "$RUNNER_TEMP/alw-emulator-host-diagnostics.txt" 2>&1
+          cat "$RUNNER_TEMP/alw-emulator-host-diagnostics.txt"
       # Preserve evidence for visual review; pageFinished alone is not a rendered-scene assertion.
       # This is the offline-only emulator variant: no account login or GPT data is present.
       - name: Upload emulator screenshot and startup diagnostics
@@ -99,5 +115,6 @@ jobs:
             ${{ runner.temp }}/alw-screen.png
             ${{ runner.temp }}/alw-ui.xml
             ${{ runner.temp }}/alw-startup-log.txt
+            ${{ runner.temp }}/alw-emulator-host-diagnostics.txt
           if-no-files-found: warn
           retention-days: 3

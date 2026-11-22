@@ -10,6 +10,7 @@ on:
       - 'tools/inspect_android_integration.py'
       - 'tools/inspect_android_engine_save.py'
       - 'tools/stage_brena_android.py'
+      - 'tools/patch_brena_vn_state.py'
       - 'tools/inspect_android_clock.py'
       - 'tools/inspect_android_vn_view.py'
       - 'tools/patch_android_debug_ui.py'
@@ -97,6 +98,7 @@ jobs:
       - name: Stage Brena Python modules into Android source and smoke-import
         run: |
           python tools/stage_brena_android.py src
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view
@@ -131,6 +133,7 @@ jobs:
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
           python tools/stage_brena_android.py src
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view

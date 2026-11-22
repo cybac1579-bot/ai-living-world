@@ -20,6 +20,21 @@ def main():
     assert 'AI Living World / 진단 D4' in source, "Diagnostic patch must be applied first"
     source=replace_once(
         source,
+        "    private volatile boolean pageFailed = false;",
+        "    private volatile boolean pageFailed = false;\n"
+        "    private TextView bootBanner;\n"
+        "    private LinearLayout bar;"
+    )
+    source=replace_once(
+        source, "        TextView bootBanner = new TextView(this);",
+        "        bootBanner = new TextView(this);"
+    )
+    source=replace_once(
+        source, "        final LinearLayout bar = new LinearLayout(this);",
+        "        bar = new LinearLayout(this);"
+    )
+    source=replace_once(
+        source,
         '        setContentView(root);\n        offline.setOnClickListener(v -> startEngine(true));',
         '        setContentView(root);\n'
         '        // Playable preview: native debug controls are hidden unless startup fails.\n'

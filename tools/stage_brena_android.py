@@ -15,6 +15,7 @@ MODULES = (
     "brena_android_boundary.py",
     "brena_event_adapter.py",
     "brena_clock_projection.py",
+    "brena_engine_clock_bridge.py",
 )
 
 

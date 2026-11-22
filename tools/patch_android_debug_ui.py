@@ -19,6 +19,22 @@ def main() -> None:
     text = path.read_text(encoding="utf-8")
     text = replace_exact(
         text,
+        "        root.setBackgroundColor(Color.BLACK);",
+        "        root.setBackgroundColor(Color.BLACK);\\n"
+        "        // Android 15+ edge-to-edge windows need explicit system-bar safe areas.\\n"
+        "        root.setOnApplyWindowInsetsListener((view, insets) -> {\\n"
+        "            if (android.os.Build.VERSION.SDK_INT >= 30) {\\n"
+        "                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());\\n"
+        "                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);\\n"
+        "            } else {\\n"
+        "                view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),\\n"
+        "                        insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());\\n"
+        "            }\\n"
+        "            return insets;\\n"
+        "        });"
+    )
+    text = replace_exact(
+        text,
         "        super.onCreate(savedInstanceState);",
         "        super.onCreate(savedInstanceState);\n"
         "        // LayoutParams sizes are physical pixels, not dp. Convert for modern high-density screens.\n"

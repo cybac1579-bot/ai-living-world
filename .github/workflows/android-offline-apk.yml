@@ -8,6 +8,7 @@ on:
       - source/AI_Living_World_Android_v1.3.zip
       - .github/workflows/android-offline-apk.yml
       - tools/patch_android_debug_ui.py
+      - tools/patch_android_startup_diagnostics.py
 
 permissions:
   contents: read
@@ -84,6 +85,9 @@ jobs:
 
       - name: Fix high-density Android debug toolbar and error visibility
         run: python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+
+      - name: Expose native Android startup failure stage and WebView errors
+        run: python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
 
       - name: Verify local-only offline engine contract
         shell: bash

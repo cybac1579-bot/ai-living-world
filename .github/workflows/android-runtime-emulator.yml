@@ -88,3 +88,16 @@ jobs:
           emulator-boot-timeout: 900
           disable-animations: true
           script: bash tools/android_emulator_smoke.sh
+      # Preserve evidence for visual review; pageFinished alone is not a rendered-scene assertion.
+      # This is the offline-only emulator variant: no account login or GPT data is present.
+      - name: Upload emulator screenshot and startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-emulator-visual-smoke
+          path: |
+            ${{ runner.temp }}/alw-screen.png
+            ${{ runner.temp }}/alw-ui.xml
+            ${{ runner.temp }}/alw-startup-log.txt
+          if-no-files-found: warn
+          retention-days: 3

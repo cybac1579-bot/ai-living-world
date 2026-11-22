@@ -1,0 +1,47 @@
+name: AI Living World stability gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [development/stability-gates-20261123]
+    paths:
+      - 'prototype/**'
+      - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
+      - '.github/workflows/stability-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stability-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check
+        run: python -m compileall -q prototype
+      - name: World and dialogue regression tests
+        run: python -m unittest discover -s prototype -p 'test_*.py' -v
+      - name: No unsafe generated player action API in prototype
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from brena_simulation import BrenaWorld
+          from brena_dialogue_context import dialogue_context
+          w = BrenaWorld.new()
+          before = w.to_json()
+          dialogue_context(w, "rana")
+          assert w.to_json() == before
+          assert not w.events
+          PY
+        env:
+          PYTHONPATH: prototype

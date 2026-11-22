@@ -1,0 +1,47 @@
+name: Brena offline prototype regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prototype/**'
+      - '.github/workflows/brena-prototype-regression.yml'
+  pull_request:
+    paths:
+      - 'prototype/**'
+      - '.github/workflows/brena-prototype-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile standalone Brena modules
+        run: python -m compileall -q prototype
+      - name: Run Brena world and dialogue regressions
+        run: python -m unittest discover -s prototype -p 'test_*.py' -v
+      - name: Verify repeated deterministic world and save replay
+        run: |
+          PYTHONPATH=prototype python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_dialogue_context import dialogue_context
+          a, b = BrenaWorld.new(seed=43), BrenaWorld.new(seed=43)
+          for w in (a, b):
+              for _ in range(72):
+                  w.advance_time(60)
+              w.record_event("player", "rana", "explicit interaction")
+          assert a.to_json() == b.to_json()
+          loaded = BrenaWorld.from_json(a.to_json())
+          assert loaded.to_json() == a.to_json()
+          assert dialogue_context(loaded, "rana") == dialogue_context(a, "rana")
+          assert all("player" not in str(e) or e["detail"] == "explicit interaction" for e in loaded.events)
+          print("BRENA_DETERMINISTIC_SAVE_REPLAY=PASS")
+          PY

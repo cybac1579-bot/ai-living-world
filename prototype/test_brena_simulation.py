@@ -43,6 +43,22 @@ class BrenaSimulationTests(unittest.TestCase):
         self.assertEqual(a.to_json(), b.to_json())
         self.assertFalse(any("player" in str(event) for event in a.events))
 
+    def test_sleep_follows_clock_and_survives_reload(self):
+        world = BrenaWorld.new(seed=7)
+        world.advance_time(60)  # 09:00: should not be forced to sleep
+        self.assertNotEqual(world.residents["rana"].activity, "personal_rest")
+        restored = BrenaWorld.from_json(world.to_json())
+        restored.advance_time(15 * 60)  # midnight
+        self.assertEqual(restored.residents["rana"].activity, "personal_rest")
+        self.assertEqual((restored.day, restored.minute), (2, 0))
+
+    def test_chunking_does_not_change_npc_result(self):
+        a, b = BrenaWorld.new(seed=7), BrenaWorld.new(seed=7)
+        a.advance_time(180)
+        for _ in range(3):
+            b.advance_time(60)
+        self.assertEqual(a.to_json(), b.to_json())
+
     def test_reject_invalid_time(self):
         world = BrenaWorld.new()
         for value in (-1, 1.5, True):

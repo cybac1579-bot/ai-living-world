@@ -9,6 +9,7 @@ on:
       - .github/workflows/android-offline-apk.yml
       - tools/patch_android_debug_ui.py
       - tools/patch_android_startup_diagnostics.py
+      - tools/patch_android_presentation_ui.py
 
 permissions:
   contents: read
@@ -88,6 +89,9 @@ jobs:
 
       - name: Expose native Android startup failure stage and WebView errors
         run: python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+
+      - name: Hide development toolbar when visual novel starts successfully
+        run: python tools/patch_android_presentation_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
 
       - name: Verify local-only offline engine contract
         shell: bash

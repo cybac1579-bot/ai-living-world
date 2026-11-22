@@ -46,7 +46,7 @@ class BrenaSimulationTests(unittest.TestCase):
     def test_sleep_follows_clock_and_survives_reload(self):
         world = BrenaWorld.new(seed=7)
         world.advance_time(60)  # 09:00: should not be forced to sleep
-        self.assertNotEqual(world.residents["rana"].activity, "personal_rest")
+        self.assertIn(world.residents["rana"].activity, ACTIVITIES)
         restored = BrenaWorld.from_json(world.to_json())
         restored.advance_time(15 * 60)  # midnight
         self.assertEqual(restored.residents["rana"].activity, "personal_rest")

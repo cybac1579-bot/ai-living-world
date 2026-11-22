@@ -10,6 +10,9 @@ on:
       - 'tools/inspect_android_integration.py'
       - 'tools/inspect_android_engine_save.py'
       - 'tools/stage_brena_android.py'
+      - 'tools/patch_android_debug_ui.py'
+      - 'tools/patch_android_startup_diagnostics.py'
+      - 'tools/patch_android_presentation_ui.py'
       - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
       - '.github/workflows/stability-gates.yml'
   workflow_dispatch:
@@ -109,3 +112,41 @@ jobs:
         env:
           PYTHONPATH: src:prototype
         run: python -m unittest discover -s prototype -p 'test_brena_original_engine_integration.py' -v
+
+  android-apk-compile:
+    name: Compile Android APK with staged Brena runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unpack original Android app and stage Brena
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_android.py src
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          from world_engine import EventStore
+          assert npc_view(BrenaWorld.new(), 'rana').npc_id == 'rana'
+          print('BRENA_APK_COMPILE_INPUT=PASS')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - name: Install compile SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Compile original arm64 debug APK with Brena modules
+        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+      - name: Assert built APK exists
+        run: |
+          test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh src/android_native/app/build/outputs/apk/debug/app-debug.apk

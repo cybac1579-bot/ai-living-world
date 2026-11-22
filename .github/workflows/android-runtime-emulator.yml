@@ -127,6 +127,9 @@ jobs:
       # This is the offline-only emulator variant: no account login or GPT data is present.
       - name: Upload emulator screenshot and startup diagnostics
         if: always()
+        # GitHub artifact storage quota can be exhausted independently of the APK
+        # build and emulator result. Keep the actual boot failure as the CI failure.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: android-emulator-visual-smoke

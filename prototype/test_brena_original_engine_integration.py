@@ -58,7 +58,7 @@ class OriginalEngineIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             store = EventStore(Path(directory))
             store.create(state)
-            committed = store.commit(0, None, {"events": candidates}, mode="world_tick")
+            committed = store.commit(0, None, {"events": candidates}, mode="npc_tick")
             reloaded = EventStore(Path(directory)).load()
             self.assertEqual(committed, reloaded)
             self.assertEqual(reloaded["npcs"][npc_id]["location"], adjacent[0])

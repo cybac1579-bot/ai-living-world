@@ -70,3 +70,21 @@ jobs:
           assert paths, "No Android source integration points found"
           print("ANDROID_SOURCE_INVENTORY=PASS", len(paths), "candidate files")
           PY
+
+  original-engine-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unpack original Android Python engine
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+      - name: Check original world engine syntax
+        run: python -m py_compile src/world_engine.py src/vn_server.py
+      - name: Run original engine persistence and story tests
+        working-directory: src
+        run: python -m unittest discover -s tests -p 'test_engine.py' -v

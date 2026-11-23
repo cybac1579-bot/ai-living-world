@@ -48,14 +48,20 @@ jobs:
               tree=ast.parse(chr(10).join(source))
               for node in ast.walk(tree):
                   if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) and node.name in (
-                      'resolve_explicit_movement','do_POST','commit','_commit_unlocked'):
+                      'resolve_explicit_movement','do_POST','commit','_commit_unlocked','turn','transition'):
                       start=max(0,node.lineno-3)
                       stop=min(len(source),node.end_lineno+2)
                       lines.append(f'## Implementation: {path}:{node.lineno}-{node.end_lineno}')
                       lines.extend(f'{i+1}: {source[i]}' for i in range(start,stop))
                       lines.append('')
+          for path in Path('src').rglob('app.js'):
+              lines.append('## Browser turn submission: '+str(path))
+              source=path.read_text(encoding='utf-8').splitlines()
+              matches=[i for i,line in enumerate(source) if '/api/turn' in line or 'fetch(' in line or 'move_to' in line]
+              for i in matches[:25]:
+                  lines.extend(f'{j+1}: {source[j]}' for j in range(max(0,i-6),min(len(source),i+9)))
           Path('movement-contract.md').write_text(chr(10).join(lines)+chr(10),encoding='utf-8')
-          print(Path('movement-contract.md').read_text(encoding='utf-8')[:12000])
+          print(Path('movement-contract.md').read_text(encoding='utf-8')[:40000])
           PY
       - uses: actions/upload-artifact@v4
         with:

@@ -19,8 +19,8 @@ class OfflineTravelOriginalEngineTests(unittest.TestCase):
         import subprocess
         import sys
         engine_dir=Path(world_engine.__file__).resolve().parent
-        source_root=repo/"src"
         repo=Path(__file__).resolve().parents[1]
+        source_root=repo/"src"
         with tempfile.TemporaryDirectory() as tmp:
             output=Path(tmp)/"brena.json"
             subprocess.run([sys.executable,str(repo/"tools"/"build_brena_initial_world.py"),

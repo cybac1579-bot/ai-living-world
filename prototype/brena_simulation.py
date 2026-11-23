@@ -130,8 +130,9 @@ class BrenaWorld:
         """Directional relation state. No single global spouse/partner slot."""
         if person_a == person_b:
             raise ValueError("relation requires two distinct persons")
-        if not person_a or not person_b:
-            raise ValueError("relation participants required")
+        known = set(self.residents) | {"player"}
+        if person_a not in known or person_b not in known:
+            raise ValueError("relation participants must exist")
         self.relations.setdefault(person_a, {}).setdefault(person_b, {}).update(state)
 
     def to_json(self) -> str:

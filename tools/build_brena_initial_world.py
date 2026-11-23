@@ -56,7 +56,7 @@ for key, place in {
 
 # Demo dialogue belongs to DEMO-GUIDE, not any Brena resident.
 # Never reassign it to Rana or invent a first encounter.
-state["scene"]["beats"] = []
+state["scene"]["beats"] = [{"kind": "narration", "text": "브레나 마을의 하루가 이어진다."}]
 validate_state(state)
 out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("brena-initial-world.json")
 out.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

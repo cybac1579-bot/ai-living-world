@@ -134,8 +134,6 @@ jobs:
           PY
       - name: Stage Brena Python modules into Android source and smoke-import
         run: |
-          python tools/stage_brena_initial_asset.py src
-          python tools/patch_brena_android_first_run.py src
           python tools/stage_brena_android.py src
           python tools/patch_brena_world_travel.py src/world_engine.py
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py

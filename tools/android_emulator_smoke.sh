@@ -42,7 +42,12 @@ if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEM
   exit 1
 fi
 # Capture the current foreground Activity separately from WebView callbacks.
-foreground=$(adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | head -1 || true)
+# Android 15 reports topResumedActivity, while some images only expose
+# mResumedActivity or mCurrentFocus. Inspect all supported signals.
+foreground=$(adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' || true)
+if [[ "$foreground" != *"com.ailivingworld.mobile"* ]]; then
+  foreground="$foreground $(adb shell dumpsys window windows | grep -E 'mCurrentFocus|mFocusedApp' || true)"
+fi
 echo "EMULATOR_FOREGROUND_ACTIVITY=$foreground"
 if [[ "$foreground" != *"com.ailivingworld.mobile"* ]]; then
   echo "::error::AI Living World is not the foreground Activity"

@@ -142,6 +142,10 @@ jobs:
         env:
           PYTHONPATH: src:prototype
         run: python -m unittest discover -s prototype -p 'test_brena_original_store_rana_status.py' -v
+      - name: Run generated Brena world persistence and restart regression
+        env:
+          PYTHONPATH: src:prototype
+        run: python -m unittest discover -s prototype -p 'test_brena_generated_world_store.py' -v
       - name: Run Brena event journal integration smoke
         env:
           PYTHONPATH: src:prototype

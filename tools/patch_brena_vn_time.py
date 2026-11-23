@@ -28,7 +28,7 @@ def patch(path: Path) -> None:
                     if type(payload["revision"]) is not int or state["revision"] != payload["revision"]:
                         raise WorldError("화면이 오래됐어. 다시 불러와줘.")
                     self.server.bridge.store.commit(state["revision"], None,
-                        {"events": [{"type": "world_advance", "minutes": 10}]}, mode="world_tick")
+                        {"events": [{"type": "world_advance", "minutes": 10}]}, mode="brena_world_tick")
                 finally:
                     self.server.bridge.turn_lock.release()
                 return self._respond(200, self.server.bridge.page_state())

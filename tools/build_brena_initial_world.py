@@ -54,6 +54,9 @@ for key, place in {
     npc["location"] = "BRENA-" + place.upper().replace("_", "-")
     state["npcs"]["BRENA-" + key.upper().replace("_", "-")] = npc
 
+# Demo dialogue belongs to DEMO-GUIDE, not any Brena resident.
+# Never reassign it to Rana or invent a first encounter.
+state["scene"]["beats"] = []
 validate_state(state)
 out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("brena-initial-world.json")
 out.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

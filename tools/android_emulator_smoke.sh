@@ -22,6 +22,9 @@ import os
 from pathlib import Path
 root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-ui.xml').getroot()
 texts=[el.get('text','') for el in root.iter() if el.get('text')]
+packages={el.get('package','') for el in root.iter() if el.get('package')}
+assert 'com.ailivingworld.mobile' in packages, 'Foreground UI is not AI Living World: '+repr(sorted(packages))
+print('EMULATOR_FOREGROUND_PACKAGE=PASS')
 for line in texts:
     print(line[:350])
 assert not any('진단 D4' in t for t in texts), 'Debug diagnostics should be hidden in presentation mode after startup'

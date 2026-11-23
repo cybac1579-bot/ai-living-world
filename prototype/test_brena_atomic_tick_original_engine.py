@@ -38,12 +38,17 @@ class BrenaAtomicWorldTickTests(unittest.TestCase):
                 self.assertEqual(state["player"]["location"], old_player)
                 for npc, info in state["npcs"].items():
                     self.assertIn(info["location"], state["regions"])
+                    if "brena_activity" in info:
+                        self.assertIsInstance(info["brena_activity"], str)
             self.assertTrue(any(state["npcs"][k]["location"] != v for k, v in old_npcs.items())
-                            or state["world_minutes"] > initial["world_minutes"])
+                            or state["world_minutes"] > initial.get("world_minutes", 0))
+            saved_activities = {k: v.get("brena_activity") for k, v in state["npcs"].items()}
             cache = Path(temp) / "save/state.json"
             if cache.exists():
                 cache.unlink()
-            self.assertEqual(EventStore(Path(temp) / "save").load(), state)
+            replay = EventStore(Path(temp) / "save").load()
+            self.assertEqual(replay, state)
+            self.assertEqual({k: v.get("brena_activity") for k, v in replay["npcs"].items()}, saved_activities)
             with self.assertRaises(Exception):
                 store.commit(5, None, {"events": [{"type": "world_advance", "minutes": 10}]},
                              mode="brena_world_tick")

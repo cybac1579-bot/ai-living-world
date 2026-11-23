@@ -25,7 +25,7 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
 
     def test_remote_npc_location_is_redacted_even_with_player_elsewhere(self):
         from brena_presentation_payload import rana_status_payload
-        result = rana_status_payload({"world_minutes": 0}, player_place="non_matching_place")
+        result = rana_status_payload({"world_minutes": 0}, player_place="square")
         self.assertIs(result["player_present"], False)
         for key in ("place_id", "place_label", "activity_id", "activity_label"):
             self.assertIsNone(result[key], key)

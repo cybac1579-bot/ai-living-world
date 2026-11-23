@@ -15,9 +15,13 @@ def available_destinations(engine_state: dict[str, Any]) -> list[dict[str, str]]
     if current not in regions:
         raise ValueError("player is in an unknown region")
     result = []
+    seen = set()
     for destination in regions[current].get("neighbors", []):
-        if destination not in regions:
+        if not isinstance(destination, str) or destination not in regions:
             raise ValueError("region references an unknown neighbor")
+        if destination == current or destination in seen:
+            continue
+        seen.add(destination)
         result.append({"id": destination, "name": regions[destination]["name"]})
     return result
 

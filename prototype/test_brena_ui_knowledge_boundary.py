@@ -23,6 +23,15 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
         self.assertNotIn("Date.now(", source)
         self.assertNotIn("new Date(", source)
 
+    def test_travel_preview_is_read_only_and_uses_server_destinations(self):
+        source = (ROOT / "tools/patch_brena_vn_ui.py").read_text(encoding="utf-8")
+        self.assertIn("brena-travel-preview", source)
+        self.assertIn("app.brena.destinations", source)
+        self.assertIn("Array.isArray(destinations)", source)
+        self.assertIn("destinations.map(d=>d.name)", source)
+        self.assertNotIn("travelPreview.onclick", source)
+        self.assertNotIn("travelPreview.addEventListener", source)
+
     def test_payload_does_not_assume_player_is_present(self):
         from brena_presentation_payload import rana_status_payload
         result = rana_status_payload({"world_minutes": 0})

@@ -11,6 +11,7 @@ KEYWORDS = ("live_demo_world", "initial_state", "store.create", "EventStore(",
 def inspect(root: Path) -> int:
     files = (
         root / "vn_server.py",
+        root / "android_native/app/src/main/python/mobile_embedded.py",
         root / "android_native/app/src/main/python/vn_server.py",
         root / "android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java",
     )
@@ -31,6 +32,8 @@ def inspect(root: Path) -> int:
         lines = path.read_text(encoding="utf-8").splitlines()
         anchors = [i for i, line in enumerate(lines)
                    if "live_demo_world.json" in line or "SAMPLE =" in line
+                   or "EventStore(" in line or "store.create(" in line
+                   or "def start_engine" in line or "def start_server" in line
                    or "def _ensure" in line or "def start" in line
                    or "private void startEngine" in line]
         emitted = set()

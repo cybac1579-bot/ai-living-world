@@ -1,0 +1,52 @@
+name: Brena original engine contract inspection
+
+on:
+  push:
+    branches: [main, 'development/stability-gates-20261123']
+    paths:
+      - .github/workflows/brena-engine-contract.yml
+      - source/AI_Living_World_Android_v1.3.zip
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract original engine and document movement action contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          paths=list(Path('src').rglob('world_engine.py'))+list(Path('src').rglob('vn_server.py'))
+          if not paths:
+              raise SystemExit('Original engine/server files not found')
+          lines=['# Original Android movement/action contracts','']
+          for path in paths:
+              lines.append('## '+str(path))
+              tree=ast.parse(path.read_text(encoding='utf-8'))
+              for node in ast.walk(tree):
+                  if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
+                      if any(k in node.name.lower() for k in ('move','travel','action','post','commit','apply','event')):
+                          args=', '.join(a.arg for a in node.args.args)
+                          lines.append(f'- line {node.lineno}: {node.name}({args})')
+                  if isinstance(node,ast.Constant) and isinstance(node.value,str):
+                      if any(k in node.value.lower() for k in ('move','travel','destination')):
+                          lines.append(f'- string line {node.lineno}: {node.value[:120]!r}')
+              lines.append('')
+          Path('movement-contract.md').write_text(chr(10).join(lines)+chr(10),encoding='utf-8')
+          print(Path('movement-contract.md').read_text(encoding='utf-8')[:12000])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brena-original-engine-contract
+          path: movement-contract.md
+          retention-days: 7

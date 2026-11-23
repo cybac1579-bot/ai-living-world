@@ -32,6 +32,9 @@ for key, (name, neighbors) in places.items():
     region["id"] = "BRENA-" + key.upper().replace("_", "-")
     region["name"] = name
     region["neighbors"] = ["BRENA-" + n.upper().replace("_", "-") for n in neighbors]
+    # Original demo directional exits refer to demo neighbors; they cannot
+    # be carried into a different graph. Brena directions are not canon yet.
+    region["exits"] = {}
     state["regions"]["BRENA-" + key.upper().replace("_", "-")] = region
 
 state["player"]["location"] = "BRENA-SQUARE"

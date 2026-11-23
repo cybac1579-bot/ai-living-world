@@ -77,7 +77,7 @@ def main():
     s=exact(s, '                    webView.loadUrl(result);',
        '                    pageFailed = false;\n'
        '                    uiError("진단 D4 | 단계 4: 내부 페이지 로딩 중");\n'
-       '                    webView.loadUrl(result);')
+       '                    // The background engine can finish before WebView initialization.\\n'\n       '                    // Wait on the UI thread rather than dereferencing a null view.\\n'\n       '                    new Runnable() {\\n'\n       '                        int attempts = 0;\\n'\n       '                        @Override public void run() {\\n'\n       '                            if (isFinishing() || isDestroyed()) return;\\n'\n       '                            if (webView != null) { webView.loadUrl(result); return; }\\n'\n       '                            if (attempts++ < 30) {\\n'\n       '                                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 100);\\n'\n       '                            } else {\\n'\n       '                                Log.e("ALW_BOOT", "WebView unavailable after startup wait");\\n'\n       '                                uiError("진단 D4 | WebView 초기화 실패");\\n'\n       '                            }\\n'\n       '                        }\\n'\n       '                    }.run();')
     s=exact(s,
        '            } catch (Exception ex) {\n'
        '                uiError("실행 실패: Android 런타임/인증/리소스를 확인해야 해. (" + ex.getClass().getSimpleName() + ")");\n'

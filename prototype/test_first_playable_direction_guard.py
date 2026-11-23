@@ -14,7 +14,7 @@ class FirstPlayableDirectionTests(unittest.TestCase):
         api = (ROOT / "tools/patch_brena_vn_time.py").read_text(encoding="utf-8")
         self.assertIn("advanceBtn.addEventListener('click'", ui)
         self.assertIn("window.confirm('게임 시간을 10분 진행할까?')", ui)
-        self.assertIn('mode="world_tick"', api)
+        self.assertIn('mode="brena_world_tick"', api)
         self.assertIn('payload["minutes"] != 10', api)
         self.assertNotIn("Date.now(", ui)
         self.assertNotIn("setInterval(", ui)

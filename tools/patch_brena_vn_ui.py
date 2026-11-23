@@ -78,9 +78,11 @@ def patch(path: Path) -> None:
         }).then(async res=>{
           const data=await res.json();
           if (!res.ok) throw new Error(data.error||'이동 실패');
+          sending=false;
           renderScene(data);
         }).catch(async err=>{
           notify('이동 상태를 다시 확인해줘: '+String(err.message||err));
+          sending=false;
           try {const res=await fetch('/api/state',{cache:'no-store'});if(res.ok)renderScene(await res.json());}catch(_e){}
         }).finally(()=>{sending=false;});
 

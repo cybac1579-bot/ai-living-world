@@ -29,6 +29,48 @@ def patch(path: Path) -> None:
         from autonomy import advance_clock'''
     assert source.count(old)==1, "Unexpected transition branch"
     source=source.replace(old,new,1)
+    # The Brena tick is a single journaled transition: advance the original
+    # authoritative clock and commit adjacent NPC moves together.
+    source=source.replace(
+        '"world_tick", "player_travel"), "unknown mode")',
+        '"world_tick", "player_travel", "brena_world_tick"), "unknown mode")',1)
+    source=source.replace(
+        'if mode == "world_tick":\\n        _require(submission is None',
+        'if mode in ("world_tick", "brena_world_tick"):\\n        _require(submission is None',1)
+    source=source.replace(
+        '    if mode == "world_tick":\\n        from autonomy import advance_clock',
+        '''    if mode == "brena_world_tick":
+        from autonomy import advance_clock
+        from brena_engine_clock_bridge import view_from_engine_state
+        from brena_simulation import BrenaWorld
+        from brena_event_adapter import movement_candidates
+        advance_clock(result, events[0]["minutes"])
+        if state["world_minutes"] // 60 != result["world_minutes"] // 60:
+            projected = BrenaWorld.new(seed=1)
+            projected.advance_time(result["world_minutes"])
+            place_to_region = {
+                "square": "BRENA-SQUARE",
+                "general_store": "BRENA-GENERAL-STORE",
+                "inn": "BRENA-INN",
+                "smithy": "BRENA-SMITHY",
+                "chief_house": "BRENA-CHIEF-HOUSE",
+                "guard_training_ground": "BRENA-GUARD-TRAINING-GROUND",
+            }
+            resident_to_npc = {
+                "rana": "BRENA-RANA", "chief": "BRENA-CHIEF",
+                "smith": "BRENA-SMITH", "shopkeeper": "BRENA-SHOPKEEPER",
+                "innkeeper": "BRENA-INNKEEPER", "resident_a": "BRENA-RESIDENT-A",
+                "resident_b": "BRENA-RESIDENT-B",
+            }
+            for event in movement_candidates(projected, result,
+                                             place_to_region=place_to_region,
+                                             resident_to_npc=resident_to_npc):
+                result["npcs"][event["npc_id"]]["location"] = event["destination"]
+        result["revision"] += 1
+        validate_state(result)
+        return result
+    if mode == "world_tick":
+        from autonomy import advance_clock''',1)
     path.write_text(source,encoding="utf-8")
     print("BRENA_OFFLINE_TRAVEL_ENGINE_PATCH=PASS",path)
 

@@ -72,6 +72,36 @@ class SaveTests(unittest.TestCase):
                 save_world(path, world)
             self.assertFalse(path.exists())
 
+    def test_invalid_event_and_relation_snapshots_fall_back(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            previous = BrenaWorld.new(seed=17)
+            save_world(path, previous)
+            save_world(path, BrenaWorld.new(seed=18))
+            base = json.loads(path.read_text(encoding="utf-8"))
+            bad_cases = [
+                {"events": [{"day": True, "minute": 0, "actor": "rana", "subject": "player", "detail": "x"}]},
+                {"events": [{"day": 2, "minute": 0, "actor": "rana", "subject": "player", "detail": "x"}]},
+                {"events": [{"day": 1, "minute": 0, "actor": "unknown", "subject": "player", "detail": "x"}]},
+                {"relations": {"rana": ["player"]}},
+                {"relations": {"rana": {"player": "friendly"}}},
+                {"relations": {"rana": {"rana": {"trust": 1}}}},
+            ]
+            for mutation in bad_cases:
+                corrupted = dict(base)
+                corrupted.update(mutation)
+                path.write_text(json.dumps(corrupted), encoding="utf-8")
+                self.assertEqual(load_world(path).seed, 17, mutation)
+
+    def test_valid_event_and_relation_roundtrip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.json"
+            world = BrenaWorld.new(seed=19)
+            world.record_event("rana", "player", "met at square")
+            world.set_relation("rana", "player", trust=1)
+            save_world(path, world)
+            self.assertEqual(load_world(path).to_json(), world.to_json())
+
     def test_no_valid_save_is_error_not_silent_reset(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValueError):

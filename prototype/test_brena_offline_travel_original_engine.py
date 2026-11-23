@@ -21,9 +21,15 @@ class OfflineTravelOriginalEngineTests(unittest.TestCase):
                 candidate=json.loads(file.read_text(encoding="utf-8"))
                 validate_state(candidate)
                 current=candidate["player"]["location"]
-                if candidate["revision"]==0 and candidate["regions"][current].get("neighbors"):
-                    state=candidate
-                    break
+                if candidate["revision"]==0:
+                    for region_id,region in candidate["regions"].items():
+                        if region.get("neighbors"):
+                            candidate["player"]["location"]=region_id
+                            validate_state(candidate)
+                            state=candidate
+                            break
+                    if state is not None:
+                        break
             except (ValueError,KeyError,TypeError):
                 pass
         self.assertIsNotNone(state, "Need validated original adjacent-region fixture")

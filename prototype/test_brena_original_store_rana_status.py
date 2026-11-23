@@ -48,6 +48,16 @@ class RanaOriginalStoreReplayTests(unittest.TestCase):
             self.assertEqual(replayed, saved)
             self.assertEqual(rana_status_payload(replayed), baseline)
             self.assertEqual(replayed["player"], initial["player"])
+            # The Brena projection must remain deterministic across reloads,
+            # including the next in-game day, without mutating the source save.
+            advanced = dict(replayed)
+            advanced["world_minutes"] = 1440
+            next_day = rana_status_payload(advanced)
+            self.assertEqual(next_day["day"], baseline["day"] + 1)
+            self.assertEqual(next_day["minute"], baseline["minute"])
+            self.assertEqual(rana_status_payload(advanced), next_day)
+            self.assertEqual(EventStore(Path(temp)).load(), saved)
+
             self.assertNotIn("dialogue", baseline)
             self.assertNotIn("player_action", baseline)
 

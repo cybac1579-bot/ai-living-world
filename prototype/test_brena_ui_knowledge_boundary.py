@@ -15,6 +15,14 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
         self.assertIn("ranaBadge.hidden", source)
         self.assertNotIn("'라나 · '+rana.place_label", source)
 
+    def test_vn_clock_uses_only_authoritative_game_time(self):
+        source = (ROOT / "tools/patch_brena_vn_ui.py").read_text(encoding="utf-8")
+        self.assertIn("brena-world-clock", source)
+        self.assertIn("clock.day", source)
+        self.assertIn("clock.minute", source)
+        self.assertNotIn("Date.now(", source)
+        self.assertNotIn("new Date(", source)
+
     def test_payload_does_not_assume_player_is_present(self):
         from brena_presentation_payload import rana_status_payload
         result = rana_status_payload({"world_minutes": 0})

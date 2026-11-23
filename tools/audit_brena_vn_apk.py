@@ -18,12 +18,12 @@ java=(root/"android_native/app/src/main/java/com/ailivingworld/mobile/MainActivi
 assert "return private, brena, web" in mobile, "Embedded server does not select Brena sample"
 assert "store = initial_demo_store(save,sample_file=sample)" in mobile, "Existing EventStore startup must be preserved"
 assert '"examples/brena_initial_world.json"' in java, "Java must copy Brena packaged asset"
-assert "brena-rana-status" in js, "Android VN asset missing Rana label"
+assert "brena-time-actions" in js and "/api/brena/advance-time" in js, "Missing explicit time control"\nassert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
 assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
 assert "app.brena.destinations" in js, "Android VN travel preview must use server data"
 assert "/api/brena/travel" in js, "Travel button must call offline endpoint"
-assert 'mode="player_travel"' in server, "Offline travel must use original EventStore"
+assert 'mode="world_tick"' in server and '"/api/brena/advance-time"' in server, "Missing original EventStore time endpoint"\nassert 'mode="player_travel"' in server, "Offline travel must use original EventStore"
 assert 'if urlsplit(self.path).path == "/api/brena/travel":' in server, "Missing protected offline route"
 assert '"brena": {"rana": rana_status_payload(engine_state),' in server
 assert '"destinations": available_destinations(engine_state)' in server
@@ -36,18 +36,18 @@ with ZipFile(apk) as z:
     assets=[x for x in names if x.endswith("app.js")]
     print("ANDROID_JS_ASSETS",assets)
     found=False
-    found_travel=False
+    found_time=False\n    found_travel=False
     found_offline_action=False
     for name in assets:
         content=z.read(name)
         if b"brena-rana-status" in content:
             found=True
-        if b"brena-travel-preview" in content and b"app.brena.destinations" in content:
+        if b"brena-time-actions" in content and b"/api/brena/advance-time" in content:\n            found_time=True\n        if b"brena-travel-preview" in content and b"app.brena.destinations" in content:
             found_travel=True
         if b"/api/brena/travel" in content and b"X-ALW-CSRF" in content:
             found_offline_action=True
     assert found, "Compiled APK does not contain Rana UI JavaScript"
-    assert found_travel, "Compiled APK does not contain Brena travel preview"
+    assert found_time, "Compiled APK missing explicit Brena time control"\n    assert found_travel, "Compiled APK does not contain Brena travel preview"
     assert found_offline_action, "Compiled APK lacks offline travel action"
     packaged_python=[]
     for name in names:

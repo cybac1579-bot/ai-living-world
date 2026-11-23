@@ -6,7 +6,8 @@ This is a packaging prerequisite, not a claim that the UI invokes Brena.
 from __future__ import annotations
 
 import argparse
-import shutil
+import os
+import tempfile
 from pathlib import Path
 
 MODULES = (
@@ -40,12 +41,31 @@ def stage(prototype: Path, android_src: Path) -> list[Path]:
             if target.exists() and target.read_bytes() != source_bytes:
                 raise FileExistsError(f"refusing to overwrite existing Android module: {name}")
             planned.append((origin, target))
-    outputs = []
-    for origin, target in planned:
-        if not target.exists():
-            shutil.copyfile(origin, target)
-        outputs.append(target)
-    return outputs
+    # Stage all missing files first. On failure, undo only this call's additions.
+    pending = []
+    published = []
+    try:
+        for origin, target in planned:
+            if target.exists():
+                continue
+            fd, name = tempfile.mkstemp(prefix=".brena-stage-", dir=target.parent)
+            temporary = Path(name)
+            pending.append((temporary, target))
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(origin.read_bytes())
+                stream.flush()
+                os.fsync(stream.fileno())
+        for temporary, target in pending:
+            os.link(temporary, target)  # exclusive: never replace another writer
+            published.append(target)
+        return [target for _, target in planned]
+    except BaseException:
+        for target in reversed(published):
+            target.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary, _ in pending:
+            temporary.unlink(missing_ok=True)
 
 
 def main() -> None:

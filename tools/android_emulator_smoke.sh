@@ -41,6 +41,13 @@ if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEM
   echo "::error::Android app process crashed"
   exit 1
 fi
+# Capture the current foreground Activity separately from WebView callbacks.
+foreground=$(adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | head -1 || true)
+echo "EMULATOR_FOREGROUND_ACTIVITY=$foreground"
+if [[ "$foreground" != *"com.ailivingworld.mobile"* ]]; then
+  echo "::error::AI Living World is not the foreground Activity"
+  exit 1
+fi
 adb shell screencap -p /sdcard/alw-screen.png
 adb pull /sdcard/alw-screen.png "$RUNNER_TEMP/alw-screen.png" > /dev/null
 python - <<'PY'

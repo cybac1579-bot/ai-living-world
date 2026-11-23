@@ -33,6 +33,10 @@ jobs:
           for path in paths:
               lines.append('## '+str(path))
               tree=ast.parse(path.read_text(encoding='utf-8'))
+              if path.name=='world_engine.py':
+                  for line in path.read_text(encoding='utf-8').splitlines()[:46]:
+                      if 'TRAVEL_COMMAND_RE' in line or 're.compile' in line:
+                          lines.append('MOVEMENT_REGEX '+line)
               for node in ast.walk(tree):
                   if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
                       if any(k in node.name.lower() for k in ('move','travel','action','post','commit','apply','event')):

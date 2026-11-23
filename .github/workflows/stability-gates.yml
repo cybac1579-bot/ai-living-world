@@ -116,6 +116,21 @@ jobs:
           PY
       - name: Check original world engine syntax
         run: python -m py_compile src/world_engine.py src/vn_server.py
+      - name: Verify patched VN server responds with Brena clock from legacy save
+        env:
+          PYTHONPATH: src/android_native/app/src/main/python:src:prototype
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'src/android_native/app/src/main/python')
+          import vn_server
+          from brena_presentation_payload import rana_status_payload
+          assert 'rana_status_payload' in vn_server.StoryBridge.page_state.__code__.co_names
+          assert rana_status_payload({'world_minutes': 0})['day'] == 1
+          assert rana_status_payload({})['minute'] == 480
+          print('BRENA_VN_SERVER_CLOCK_CONTRACT=PASS')
+          PY
       - name: Run original engine persistence and story tests
         working-directory: src
         run: python -m unittest discover -s tests -p 'test_engine.py' -v

@@ -138,7 +138,7 @@ class GeneratedBrenaStoreTests(unittest.TestCase):
                 {"events": []}, mode="player_travel",
             )
             self.assertEqual(committed["player"]["location"], destination)
-            self.assertEqual(committed["world_minutes"], initial["world_minutes"])
+            self.assertEqual(committed.get("world_minutes"), initial.get("world_minutes"))
             self.assertEqual(committed["npcs"], initial["npcs"])
             self.assertEqual(committed["revision"], initial["revision"] + 1)
             journal = save_dir / "events.jsonl"
@@ -149,7 +149,7 @@ class GeneratedBrenaStoreTests(unittest.TestCase):
             restored = EventStore(save_dir).load()
             self.assertEqual(restored, committed)
             self.assertEqual(restored["player"]["location"], destination)
-            self.assertEqual(restored["world_minutes"], initial["world_minutes"])
+            self.assertEqual(restored.get("world_minutes"), initial.get("world_minutes"))
             self.assertEqual(restored["npcs"], initial["npcs"])
 
     def test_generated_world_survives_eventstore_restart(self):

@@ -57,6 +57,21 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
         self.assertIsNone(hidden["place_id"])
         self.assertEqual(repr(original), snapshot)
 
+    def test_projected_activity_is_hidden_when_saved_npc_did_not_reach_destination(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from brena_presentation_payload import rana_status_payload
+        state = {"world_minutes": 60, "player": {"location": "BRENA-CHIEF-HOUSE"},
+                 "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}
+        projected = SimpleNamespace(day=1, minute=540, npc_place="inn",
+                                    npc_activity="socializing")
+        with patch("brena_presentation_payload.view_from_engine_state", return_value=projected):
+            result = rana_status_payload(state)
+        self.assertTrue(result["player_present"])
+        self.assertEqual(result["place_id"], "chief_house")
+        self.assertIsNone(result["activity_id"])
+        self.assertIsNone(result["activity_label"])
+
     def test_every_simulation_activity_has_a_korean_presentation_label(self):
         from brena_simulation import ACTIVITIES
         from brena_presentation_payload import KNOWN_ACTIVITIES

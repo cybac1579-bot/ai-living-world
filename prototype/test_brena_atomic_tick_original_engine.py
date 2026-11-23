@@ -34,7 +34,7 @@ class BrenaAtomicWorldTickTests(unittest.TestCase):
                     {"events": [{"type": "world_advance", "minutes": 10}]},
                     mode="brena_world_tick")
                 self.assertEqual(state["revision"], revision + 1)
-                self.assertEqual(state["world_minutes"], initial["world_minutes"] + (revision + 1) * 10)
+                self.assertEqual(state["world_minutes"], initial.get("world_minutes", 0) + (revision + 1) * 10)
                 self.assertEqual(state["player"]["location"], old_player)
                 for npc, info in state["npcs"].items():
                     self.assertIn(info["location"], state["regions"])

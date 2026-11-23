@@ -30,7 +30,7 @@ class ExplicitTravelContractTests(unittest.TestCase):
             self.assertIn('set(submission) == {"destination"}', source)
             self.assertIn('model_output == {"events": []}', source)
             self.assertIn('validate_selected_destination(state, submission["destination"])', source)
-            travel = source.split('if mode == "player_travel":')[-1].split('if mode == "world_tick":')[0]
+            travel = source.split('if mode == "player_travel":')[-1].split('if mode == "brena_world_tick":')[0]
             self.assertIn('result["player"]["location"] = destination', travel)
             self.assertNotIn("world_minutes", travel)
             self.assertNotIn("advance_clock", travel)

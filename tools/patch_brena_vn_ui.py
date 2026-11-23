@@ -90,6 +90,44 @@ def patch(path: Path) -> None:
       travelActions.appendChild(btn);
     });
     travelActions.hidden=!validDestinations || destinations.length===0;
+    // The clock advances only after an explicit player click.
+    let timeActions=document.getElementById('brena-time-actions');
+    if (!timeActions) {
+      timeActions=document.createElement('div');
+      timeActions.id='brena-time-actions';
+      timeActions.style.cssText='display:flex;gap:6px;margin:6px 0';
+      travelActions.insertAdjacentElement('afterend',timeActions);
+    }
+    timeActions.replaceChildren();
+    if (validClock) {
+      const advanceBtn=document.createElement('button');
+      advanceBtn.type='button';
+      advanceBtn.textContent='시간 10분 진행';
+      advanceBtn.style.cssText='font-size:12px;padding:6px 9px';
+      advanceBtn.disabled=sending;
+      advanceBtn.addEventListener('click',()=>{
+        if (sending || !app || !app.world || !app.csrf) return;
+        if (!window.confirm('게임 시간을 10분 진행할까?')) return;
+        sending=true;
+        advanceBtn.disabled=true;
+        fetch('/api/brena/advance-time',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-ALW-CSRF':app.csrf},
+          body:JSON.stringify({revision:app.world.revision,minutes:10})
+        }).then(async res=>{
+          const data=await res.json();
+          if (!res.ok) throw new Error(data.error||'시간 진행 실패');
+          sending=false;
+          renderScene(data);
+        }).catch(async err=>{
+          notify('시간 진행 상태를 다시 확인해줘: '+String(err.message||err));
+          sending=false;
+          try {const res=await fetch('/api/state',{cache:'no-store'});if(res.ok)renderScene(await res.json());}catch(_e){}
+        }).finally(()=>{sending=false;});
+      });
+      timeActions.appendChild(advanceBtn);
+    }
+    timeActions.hidden=!validClock;
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

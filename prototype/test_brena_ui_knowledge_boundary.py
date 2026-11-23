@@ -45,6 +45,13 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
         self.assertIsNone(hidden["place_id"])
         self.assertEqual(repr(original), snapshot)
 
+    def test_every_simulation_activity_has_a_korean_presentation_label(self):
+        from brena_simulation import ACTIVITIES
+        from brena_presentation_payload import KNOWN_ACTIVITIES
+        self.assertTrue(set(ACTIVITIES).issubset(KNOWN_ACTIVITIES))
+        for activity in ACTIVITIES:
+            self.assertNotEqual(KNOWN_ACTIVITIES[activity], activity)
+
     def test_remote_npc_location_is_redacted_even_with_player_elsewhere(self):
         from brena_presentation_payload import rana_status_payload
         result = rana_status_payload({"world_minutes": 0}, player_place="square")

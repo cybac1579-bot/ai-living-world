@@ -29,6 +29,7 @@ template = deepcopy(next(iter(state["regions"].values())))
 state["regions"] = {}
 for key, (name, neighbors) in places.items():
     region = deepcopy(template)
+    region["id"] = "BRENA-" + key.upper().replace("_", "-")
     region["name"] = name
     region["neighbors"] = ["BRENA-" + n.upper().replace("_", "-") for n in neighbors]
     state["regions"]["BRENA-" + key.upper().replace("_", "-")] = region
@@ -46,6 +47,7 @@ for key, place in {
     "resident_b": "square",
 }.items():
     npc = deepcopy(npc_template)
+    npc["id"] = "BRENA-" + key.upper().replace("_", "-")
     npc["location"] = "BRENA-" + place.upper().replace("_", "-")
     state["npcs"]["BRENA-" + key.upper().replace("_", "-")] = npc
 

@@ -67,7 +67,7 @@ def patch(path: Path) -> None:
             !app.brena.destinations.some(x=>x.id===d.id)) return;
         // The original resolver accepts exact canonical region IDs.
         // No background action, direct state mutation or synthetic NPC speech.
-        sendTurn({free_text:'이동: '+d.id});
+        sendTurn({free_text:d.id+'로 이동한다'});
       });
       travelActions.appendChild(btn);
     });

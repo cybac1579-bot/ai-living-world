@@ -67,15 +67,27 @@ def patch(path: Path) -> None:
             !app.brena.destinations.some(x=>x.id===d.id)) return;
         // The original resolver accepts exact canonical region IDs.
         // No background action, direct state mutation or synthetic NPC speech.
-        sendTurn({free_text:d.id+'로 이동한다'});
+        // No GPT token, model choice, or artificial world-clock advance.
+        if (!window.confirm(d.name+'(으)로 이동할까?')) return;
+        sending=true;
+        Array.from(travelActions.children).forEach(b=>{b.disabled=true;});
+        fetch('/api/brena/travel',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-ALW-CSRF':app.csrf},
+          body:JSON.stringify({revision:app.world.revision,destination:d.id})
+        }).then(async res=>{
+          const data=await res.json();
+          if (!res.ok) throw new Error(data.error||'이동 실패');
+          renderScene(data);
+        }).catch(async err=>{
+          notify('이동 상태를 다시 확인해줘: '+String(err.message||err));
+          try {const res=await fetch('/api/state',{cache:'no-store'});if(res.ok)renderScene(await res.json());}catch(_e){}
+        }).finally(()=>{sending=false;});
+
       });
       travelActions.appendChild(btn);
     });
     travelActions.hidden=!validDestinations || destinations.length===0;
-    // Offline preview cannot submit turns: never imply movement succeeded.
-    if (!app.models || !app.models.length) {
-      Array.from(travelActions.children).forEach(btn=>{btn.disabled=true;btn.title='오프라인 이동은 아직 준비 중이야';});
-    }
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

@@ -42,14 +42,14 @@ class RanaKnowledgeBoundaryTests(unittest.TestCase):
 
     def test_rana_is_visible_only_at_same_place_without_changing_save(self):
         from brena_presentation_payload import rana_status_payload
-        original = {"world_minutes": 0, "player": {"region": "unchanged"}}
+        original = {"world_minutes": 0, "player": {"location": "BRENA-CHIEF-HOUSE"},\n                    "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}
         snapshot = repr(original)
-        visible = rana_status_payload(original, player_place="chief_house")
+        visible = rana_status_payload(original)
         self.assertIs(visible["player_present"], True)
         self.assertEqual(visible["place_id"], "chief_house")
         self.assertEqual(visible["name"], "라나")
         self.assertEqual(repr(original), snapshot)
-        hidden = rana_status_payload(original, player_place="square")
+        other = {"world_minutes": 0, "player": {"location": "BRENA-SQUARE"},\n                 "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}\n        hidden = rana_status_payload(other)
         self.assertIs(hidden["player_present"], False)
         self.assertIsNone(hidden["place_id"])
         self.assertEqual(repr(original), snapshot)

@@ -15,6 +15,26 @@ except ModuleNotFoundError:
 
 @unittest.skipIf(EventStore is None, "Android source not extracted")
 class GeneratedBrenaStoreTests(unittest.TestCase):
+    def test_brena_routes_are_bidirectional_and_no_direction_is_invented(self):
+        import world_engine
+        repo = Path(__file__).resolve().parents[1]
+        root = Path(world_engine.__file__).resolve().parent
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "brena.json"
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / "build_brena_initial_world.py"), str(root), str(output)],
+                check=True, capture_output=True, text=True,
+            )
+            state = json.loads(output.read_text(encoding="utf-8"))
+            regions = state["regions"]
+            for region_id, region in regions.items():
+                self.assertEqual(region["exits"], {}, "Do not invent unconfirmed compass directions")
+                for destination in region["neighbors"]:
+                    self.assertIn(destination, regions)
+                    self.assertIn(region_id, regions[destination]["neighbors"])
+            self.assertEqual(set(regions["BRENA-SQUARE"]["neighbors"]), set(regions) - {"BRENA-SQUARE"})
+            self.assertEqual(state["player"]["location"], "BRENA-SQUARE")
+
     def test_rana_adjacent_move_commits_without_moving_player(self):
         import world_engine
         from brena_simulation import BrenaWorld

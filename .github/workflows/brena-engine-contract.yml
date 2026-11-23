@@ -42,6 +42,18 @@ jobs:
                       if any(k in node.value.lower() for k in ('move','travel','destination')):
                           lines.append(f'- string line {node.lineno}: {node.value[:120]!r}')
               lines.append('')
+          # Capture exact original movement and POST paths for safe UI integration.
+          for path in paths:
+              source=path.read_text(encoding='utf-8').splitlines()
+              tree=ast.parse(chr(10).join(source))
+              for node in ast.walk(tree):
+                  if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) and node.name in (
+                      'resolve_explicit_movement','do_POST','commit','_commit_unlocked'):
+                      start=max(0,node.lineno-3)
+                      stop=min(len(source),node.end_lineno+2)
+                      lines.append(f'## Implementation: {path}:{node.lineno}-{node.end_lineno}')
+                      lines.extend(f'{i+1}: {source[i]}' for i in range(start,stop))
+                      lines.append('')
           Path('movement-contract.md').write_text(chr(10).join(lines)+chr(10),encoding='utf-8')
           print(Path('movement-contract.md').read_text(encoding='utf-8')[:12000])
           PY

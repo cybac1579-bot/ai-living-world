@@ -24,7 +24,7 @@ assert "ranaBadge.textContent" in js
 assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
 assert "app.brena.destinations" in js, "Android VN travel preview must use server data"
 assert "/api/brena/travel" in js, "Travel button must call offline endpoint"
-assert 'mode="world_tick"' in server and '"/api/brena/advance-time"' in server, "Missing original EventStore time endpoint"
+assert 'mode="brena_world_tick"' in server and '"/api/brena/advance-time"' in server, "Missing original EventStore time endpoint"
 assert 'mode="player_travel"' in server, "Offline travel must use original EventStore"
 assert 'if urlsplit(self.path).path == "/api/brena/travel":' in server, "Missing protected offline route"
 assert '"brena": {"rana": rana_status_payload(engine_state),' in server

@@ -24,12 +24,16 @@ class RanaOriginalStoreReplayTests(unittest.TestCase):
             try:
                 candidate = json.loads(p.read_text(encoding="utf-8"))
                 validate_state(candidate)
-                if candidate["revision"] == 0 and type(candidate.get("world_minutes")) is int:
+                if candidate["revision"] == 0:
+                    # Legacy validated fixtures may omit the elapsed clock.
+                    # Set its initial value explicitly for the Brena projection.
+                    candidate.setdefault("world_minutes", 0)
+                    validate_state(candidate)
                     initial = candidate
                     break
             except (ValueError, TypeError, KeyError):
                 continue
-        self.assertIsNotNone(initial, "No validated original fixture with world_minutes")
+        self.assertIsNotNone(initial, "No validated original revision-zero fixture")
         with tempfile.TemporaryDirectory() as temp:
             store = EventStore(Path(temp))
             store.create(initial)

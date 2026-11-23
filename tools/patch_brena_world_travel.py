@@ -65,6 +65,16 @@ def patch(path: Path) -> None:
                                              place_to_region=place_to_region,
                                              resident_to_npc=resident_to_npc):
                 result["npcs"][event["npc_id"]]["location"] = event["destination"]
+            # Only persist activities that agree with the journaled NPC location.
+            for resident_id, npc_id in resident_to_npc.items():
+                if npc_id not in result["npcs"] or resident_id not in projected.residents:
+                    continue
+                resident = projected.residents[resident_id]
+                npc = result["npcs"][npc_id]
+                if npc["location"] == place_to_region.get(resident.place):
+                    npc["brena_activity"] = resident.activity
+                else:
+                    npc.pop("brena_activity", None)
         result["revision"] += 1
         validate_state(result)
         return result

@@ -22,8 +22,14 @@ class BrenaEngineClockBridgeTests(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertEqual(state["world_minutes"], 60)
 
-    def test_rejects_missing_or_invalid_clock(self):
-        for state in ({}, {"world_minutes": -1}, {"world_minutes": True}, {"world_minutes": 1.5}):
+    def test_legacy_missing_clock_is_frozen_at_initial_instant(self):
+        state = {}
+        view = view_from_engine_state(state, "rana")
+        self.assertEqual((view.day, view.minute), (1, 480))
+        self.assertEqual(state, {})
+
+    def test_rejects_invalid_clock(self):
+        for state in ({"world_minutes": -1}, {"world_minutes": True}, {"world_minutes": 1.5}):
             with self.subTest(state=state):
                 with self.assertRaises((ValueError, KeyError)):
                     view_from_engine_state(state, "rana")

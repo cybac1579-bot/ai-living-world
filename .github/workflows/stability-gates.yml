@@ -198,7 +198,28 @@ jobs:
         with:
           gradle-version: '9.6.0'
       - name: Compile original arm64 debug APK with Brena modules
-        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          # Maven Central may temporarily rate-limit Chaquopy's native runtime (HTTP 429).
+          # Retry only that transient failure; do not hide real Gradle/compile errors.
+          for attempt in 1 2 3; do
+            echo "Android APK build attempt ${attempt}/3"
+            if gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/brena-gradle-build.log; then
+              exit 0
+            fi
+            if ! grep -Eiq 'status code 429|HTTP 429|Too Many Requests' /tmp/brena-gradle-build.log; then
+              echo "::error::Gradle failed for a reason other than HTTP 429; not retrying."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Chaquopy dependency download remained rate-limited after 3 attempts."
+              exit 1
+            fi
+            if [ "$attempt" -eq 1 ]; then wait_seconds=45; else wait_seconds=120; fi
+            echo "::warning::Maven dependency download returned HTTP 429; waiting ${wait_seconds}s before retry."
+            sleep "$wait_seconds"
+          done
       - name: Assert built APK exists
         run: |
           test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk

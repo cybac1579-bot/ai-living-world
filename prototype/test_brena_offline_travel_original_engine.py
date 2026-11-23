@@ -14,7 +14,11 @@ except ModuleNotFoundError:
 @unittest.skipIf(world_engine is None, "original Android engine not unpacked")
 class OfflineTravelOriginalEngineTests(unittest.TestCase):
     def test_explicit_travel_replays_without_gpt_or_time_change(self):
-        examples=Path(world_engine.__file__).resolve().parent / "examples"
+        engine_dir=Path(world_engine.__file__).resolve().parent
+        examples=engine_dir / "examples"
+        if not list(examples.glob("*.json")):
+            examples=engine_dir.parent.parent.parent.parent / "examples"
+        print("TRAVEL_FIXTURE_DISCOVERY",str(examples),[p.name for p in examples.glob("*.json")])
         state=None
         for file in sorted(examples.glob("*.json")):
             try:

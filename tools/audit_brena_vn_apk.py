@@ -10,6 +10,8 @@ js=(root/"android_native/app/src/main/assets/web/app.js").read_text(encoding="ut
 server=(root/"android_native/app/src/main/python/vn_server.py").read_text(encoding="utf-8")
 assert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
+assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
+assert "app.brena.destinations" in js, "Android VN travel preview must use server data"
 assert '"brena": {"rana": rana_status_payload(engine_state),' in server
 assert '"destinations": available_destinations(engine_state)' in server
 assert "from brena_player_navigation import available_destinations" in server
@@ -18,10 +20,15 @@ with ZipFile(apk) as z:
     assets=[x for x in names if x.endswith("app.js")]
     print("ANDROID_JS_ASSETS",assets)
     found=False
+    found_travel=False
     for name in assets:
-        if b"brena-rana-status" in z.read(name):
+        content=z.read(name)
+        if b"brena-rana-status" in content:
             found=True
+        if b"brena-travel-preview" in content and b"app.brena.destinations" in content:
+            found_travel=True
     assert found, "Compiled APK does not contain Rana UI JavaScript"
+    assert found_travel, "Compiled APK does not contain Brena travel preview"
     packaged_python=[]
     for name in names:
         if not name.endswith((".imy",".zip")):

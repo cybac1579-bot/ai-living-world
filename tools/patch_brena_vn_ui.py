@@ -18,6 +18,21 @@ def patch(path: Path) -> None:
       ranaBadge.style.cssText='display:block;font-size:11px;opacity:.8;line-height:1.4';
       $('place').insertAdjacentElement('afterend',ranaBadge);
     }
+    // Show only the in-game clock, never the device's real-world time.
+    let brenaClock=document.getElementById('brena-world-clock');
+    if (!brenaClock) {
+      brenaClock=document.createElement('span');
+      brenaClock.id='brena-world-clock';
+      brenaClock.style.cssText='display:block;font-size:11px;opacity:.75;line-height:1.4';
+      $('place').insertAdjacentElement('afterend',brenaClock);
+    }
+    const clock=app.brena && app.brena.rana;
+    const validClock=clock && Number.isInteger(clock.day) && clock.day>=1 &&
+      Number.isInteger(clock.minute) && clock.minute>=0 && clock.minute<1440;
+    brenaClock.hidden=!validClock;
+    brenaClock.textContent=validClock?
+      ('브레나 · '+clock.day+'일차 '+String(Math.floor(clock.minute/60)).padStart(2,'0')+
+       ':'+String(clock.minute%60).padStart(2,'0')):'';
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

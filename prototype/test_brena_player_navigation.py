@@ -38,6 +38,22 @@ class BrenaPlayerNavigationTests(unittest.TestCase):
                     validate_selected_destination(self.state, destination)
         self.assertEqual(self.state["player"]["location"], "BRENA-SQUARE")
 
+    def test_duplicate_and_self_links_are_not_offered(self):
+        self.state["regions"]["BRENA-SQUARE"]["neighbors"] = [
+            "BRENA-INN", "BRENA-INN", "BRENA-SQUARE", "BRENA-SMITHY"
+        ]
+        self.assertEqual(available_destinations(self.state), [
+            {"id": "BRENA-INN", "name": "브레나 여관"},
+            {"id": "BRENA-SMITHY", "name": "브레나 대장간"},
+        ])
+
+    def test_invalid_neighbor_is_rejected_before_offering_travel(self):
+        for bad in ("BRENA-UNKNOWN", None, 123):
+            with self.subTest(bad=bad):
+                self.state["regions"]["BRENA-SQUARE"]["neighbors"] = [bad]
+                with self.assertRaises(ValueError):
+                    available_destinations(self.state)
+
     def test_return_route_is_available_after_engine_changes_location(self):
         self.state["player"]["location"] = "BRENA-INN"
         self.assertEqual(available_destinations(self.state), [

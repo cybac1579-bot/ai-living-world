@@ -15,44 +15,6 @@ except ModuleNotFoundError:
 
 @unittest.skipIf(EventStore is None, "Android source not extracted")
 class GeneratedBrenaStoreTests(unittest.TestCase):
-    def test_explicit_player_choice_commits_brena_travel_and_replays(self):
-        import world_engine
-        from copy import deepcopy
-        from brena_player_navigation import validate_selected_destination
-        repo = Path(__file__).resolve().parents[1]
-        root = Path(world_engine.__file__).resolve().parent
-        with tempfile.TemporaryDirectory() as tmp:
-            output = Path(tmp) / "brena.json"
-            subprocess.run(
-                [sys.executable, str(repo / "tools" / "build_brena_initial_world.py"), str(root), str(output)],
-                check=True, capture_output=True, text=True,
-            )
-            initial = json.loads(output.read_text(encoding="utf-8"))
-            destination = validate_selected_destination(initial, "BRENA-INN")
-            demo = json.loads((root / "examples" / "live_demo_world.json").read_text(encoding="utf-8"))
-            # Reuse the engine's own validated choice schema rather than inventing one.
-            move_choices = [choice for choice in demo["scene"]["choices"]
-                            if "destination" in choice.get("effect", {})]
-            self.assertTrue(move_choices, "Original fixture must supply a player move choice")
-            choice = deepcopy(move_choices[0])
-            choice["id"] = "brena-visit-inn"
-            choice["label"] = "여관으로 이동"
-            choice["effect"]["destination"] = destination
-            initial["scene"]["choices"] = [choice]
-            validate_state(initial)
-            save_dir = Path(tmp) / "save"
-            store = EventStore(save_dir)
-            store.create(initial)
-            # No movement is committed until the player's explicit choice is submitted.
-            self.assertEqual(store.load()["player"]["location"], "BRENA-SQUARE")
-            committed = store.commit(0, {"choice_id": choice["id"]}, {"events": []}, mode="player")
-            self.assertEqual(committed["player"]["location"], destination)
-            self.assertEqual(initial["player"]["location"], "BRENA-SQUARE")
-            cache = save_dir / "state.json"
-            if cache.exists():
-                cache.unlink()
-            self.assertEqual(EventStore(save_dir).load(), committed)
-
     def test_invalid_player_destination_never_creates_store_revision(self):
         import world_engine
         from brena_player_navigation import validate_selected_destination

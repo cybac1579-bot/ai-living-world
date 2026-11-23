@@ -14,6 +14,7 @@ on:
       - 'tools/patch_brena_vn_ui.py'
       - 'tools/audit_brena_vn_apk.py'
       - 'tools/inspect_android_clock.py'
+      - 'tools/inspect_android_brena_regions.py'
       - 'tools/inspect_android_vn_view.py'
       - 'tools/inspect_android_vn_js.py'
       - 'tools/patch_android_debug_ui.py'
@@ -73,6 +74,7 @@ jobs:
           python tools/inspect_android_integration.py src | tee android-integration-inventory.json
           python tools/inspect_android_engine_save.py src
           python tools/inspect_android_clock.py src
+          python tools/inspect_android_brena_regions.py src
           python tools/inspect_android_vn_view.py src
           python tools/inspect_android_vn_js.py src
           python - <<'PY'

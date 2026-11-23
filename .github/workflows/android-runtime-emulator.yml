@@ -45,7 +45,7 @@ jobs:
           python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
-          PYTHONPATH=src/android_native/app/src/main/python:prototype python -m unittest prototype.test_brena_offline_travel_original_engine -v
+          PYTHONPATH=src/android_native/app/src/main/python:prototype python -m unittest prototype.test_brena_offline_travel_original_engine prototype.test_brena_atomic_tick_original_engine -v
           python tools/patch_brena_vn_ui.py src
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld

@@ -31,14 +31,15 @@ def rana_status_payload(engine_state: dict[str, Any], *, seed: int = 1,
                         player_place: str | None = None) -> dict[str, Any]:
     """Only public NPC status, with no invented speech or relationship claims."""
     view = view_from_engine_state(engine_state, "rana", seed=seed, player_place=player_place)
+    present = view.dialogue["player_present"] is True
     return {
         "npc_id": "rana",
         "name": "라나",
         "day": view.day,
         "minute": view.minute,
-        "place_id": view.npc_place,
-        "place_label": KNOWN_PLACES.get(view.npc_place, view.npc_place),
-        "activity_id": view.npc_activity,
-        "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity, view.npc_activity),
-        "player_present": view.dialogue["player_present"] is True,
+        "place_id": view.npc_place if present else None,
+        "place_label": KNOWN_PLACES.get(view.npc_place, view.npc_place) if present else None,
+        "activity_id": view.npc_activity if present else None,
+        "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity, view.npc_activity) if present else None,
+        "player_present": present,
     }

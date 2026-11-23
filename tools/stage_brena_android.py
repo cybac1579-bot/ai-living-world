@@ -17,6 +17,7 @@ MODULES = (
     "brena_clock_projection.py",
     "brena_engine_clock_bridge.py",
     "brena_presentation_payload.py",
+    "brena_player_navigation.py",
 )
 
 

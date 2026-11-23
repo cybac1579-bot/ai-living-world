@@ -117,6 +117,41 @@ class GeneratedBrenaStoreTests(unittest.TestCase):
             self.assertEqual(restored, committed)
             self.assertEqual(restored["player"], initial["player"])
 
+    def test_explicit_player_travel_journal_replay_preserves_clock_and_npcs(self):
+        import world_engine
+        from brena_player_navigation import validate_selected_destination
+        repo = Path(__file__).resolve().parents[1]
+        root = Path(world_engine.__file__).resolve().parent
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "brena.json"
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / "build_brena_initial_world.py"), str(root), str(output)],
+                check=True, capture_output=True, text=True,
+            )
+            initial = json.loads(output.read_text(encoding="utf-8"))
+            save_dir = Path(tmp) / "save"
+            store = EventStore(save_dir)
+            store.create(initial)
+            destination = validate_selected_destination(store.load(), "BRENA-INN")
+            committed = store.commit(
+                initial["revision"], {"destination": destination},
+                {"events": []}, mode="player_travel",
+            )
+            self.assertEqual(committed["player"]["location"], destination)
+            self.assertEqual(committed["world_minutes"], initial["world_minutes"])
+            self.assertEqual(committed["npcs"], initial["npcs"])
+            self.assertEqual(committed["revision"], initial["revision"] + 1)
+            journal = save_dir / "events.jsonl"
+            self.assertIn("player_travel", journal.read_text(encoding="utf-8"))
+            cache = save_dir / "state.json"
+            if cache.exists():
+                cache.unlink()
+            restored = EventStore(save_dir).load()
+            self.assertEqual(restored, committed)
+            self.assertEqual(restored["player"]["location"], destination)
+            self.assertEqual(restored["world_minutes"], initial["world_minutes"])
+            self.assertEqual(restored["npcs"], initial["npcs"])
+
     def test_generated_world_survives_eventstore_restart(self):
         import world_engine
         repo = Path(__file__).resolve().parents[1]

@@ -102,6 +102,14 @@ class SaveTests(unittest.TestCase):
             save_world(path, world)
             self.assertEqual(load_world(path).to_json(), world.to_json())
 
+    def test_unknown_relation_participant_rejected_at_mutation(self):
+        world = BrenaWorld.new()
+        with self.assertRaises(ValueError):
+            world.set_relation("rana", "unregistered_person", trust=1)
+        with self.assertRaises(ValueError):
+            world.set_relation("unregistered_person", "player", trust=1)
+        self.assertEqual(world.relations, {})
+
     def test_no_valid_save_is_error_not_silent_reset(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValueError):

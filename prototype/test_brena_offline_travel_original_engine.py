@@ -33,7 +33,25 @@ class OfflineTravelOriginalEngineTests(unittest.TestCase):
             except (ValueError,KeyError,TypeError):
                 pass
         if state is None:
-            self.skipTest("Original fixtures contain no valid connected revision-zero player region; need a dedicated integration fixture")
+            # TEST-ONLY geography: connect two existing regions, never alter game data.
+            for file in sorted(examples.glob("*.json")):
+                try:
+                    candidate=json.loads(file.read_text(encoding="utf-8"))
+                    validate_state(candidate)
+                    ids=list(candidate["regions"])
+                    if candidate["revision"] != 0 or len(ids)<2:
+                        continue
+                    origin_id,destination_id=ids[:2]
+                    candidate["player"]["location"]=origin_id
+                    candidate["regions"][origin_id]["neighbors"]=[destination_id]
+                    candidate["regions"][destination_id]["neighbors"]=[origin_id]
+                    validate_state(candidate)
+                    state=candidate
+                    print("OFFLINE_TRAVEL_TEST_FIXTURE=synthetic_adjacency_existing_regions")
+                    break
+                except (ValueError,KeyError,TypeError):
+                    continue
+        self.assertIsNotNone(state,"Original fixtures lack two valid regions; cannot prove offline travel")
         origin=state["player"]["location"]
         destination=state["regions"][origin]["neighbors"][0]
         before_clock={k:state.get(k) for k in ("world_minutes","world_time","day","minute")}

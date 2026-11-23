@@ -25,6 +25,25 @@ def inspect(root: Path) -> int:
                     continue
                 print(f"STARTUP_SOURCE {path.relative_to(root)}:{lineno} {line.strip()[:220]}")
                 matches += 1
+    # Show bounded nearby source so asset-copy and first-launch behavior can be
+    # reviewed before changing which world the app loads.
+    for path in files:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        anchors = [i for i, line in enumerate(lines)
+                   if "live_demo_world.json" in line or "SAMPLE =" in line
+                   or "def _ensure" in line or "def start" in line
+                   or "private void startEngine" in line]
+        emitted = set()
+        for i in anchors:
+            for n in range(max(0, i - 5), min(len(lines), i + 9)):
+                if n in emitted:
+                    continue
+                emitted.add(n)
+                line = lines[n]
+                if any(secret in line.lower() for secret in
+                       ("password", "secret", "token", "api_key", "authorization")):
+                    continue
+                print(f"STARTUP_CONTEXT {path.relative_to(root)}:{n+1} {line[:220]}")
     if not matches:
         raise AssertionError("No Android startup/initial-state anchors found")
     print(f"ANDROID_STARTUP_ANCHORS=PASS {matches}")

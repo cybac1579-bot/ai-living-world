@@ -43,6 +43,9 @@ class BrenaAtomicWorldTickTests(unittest.TestCase):
             self.assertTrue(any(state["npcs"][k]["location"] != v for k, v in old_npcs.items())
                             or state["world_minutes"] > initial.get("world_minutes", 0))
             saved_activities = {k: v.get("brena_activity") for k, v in state["npcs"].items()}
+            self.assertTrue(any(activity is not None for activity in saved_activities.values()),
+                            "NPC activities must be journaled after the first hourly tick")
+            self.assertEqual(state["npcs"]["BRENA-SMITH"].get("brena_activity"), "facility_duties")
             cache = Path(temp) / "save/state.json"
             if cache.exists():
                 cache.unlink()

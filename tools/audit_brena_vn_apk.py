@@ -10,7 +10,9 @@ js=(root/"android_native/app/src/main/assets/web/app.js").read_text(encoding="ut
 server=(root/"android_native/app/src/main/python/vn_server.py").read_text(encoding="utf-8")
 assert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
-assert '"brena": {"rana": rana_status_payload(engine_state)}' in server
+assert '"brena": {"rana": rana_status_payload(engine_state),' in server
+assert '"destinations": available_destinations(engine_state)' in server
+assert "from brena_player_navigation import available_destinations" in server
 with ZipFile(apk) as z:
     names=z.namelist()
     assets=[x for x in names if x.endswith("app.js")]
@@ -26,8 +28,9 @@ with ZipFile(apk) as z:
             continue
         try:
             with ZipFile(BytesIO(z.read(name))) as inner:
-                packaged_python.extend(x for x in inner.namelist() if "brena_presentation_payload" in x)
+                packaged_python.extend(x for x in inner.namelist() if "brena_presentation_payload" in x or "brena_player_navigation" in x)
         except Exception:
             continue
-    assert packaged_python, "Compiled APK missing Rana Python status module"
+    assert any("brena_presentation_payload" in x for x in packaged_python), "Compiled APK missing Rana Python status module"
+    assert any("brena_player_navigation" in x for x in packaged_python), "Compiled APK missing travel Python module"
 print("BRENA_ANDROID_UI_PACKAGE_AUDIT=PASS")

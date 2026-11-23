@@ -32,7 +32,7 @@ class GeneratedBrenaStoreTests(unittest.TestCase):
             demo = json.loads((root / "examples" / "live_demo_world.json").read_text(encoding="utf-8"))
             # Reuse the engine's own validated choice schema rather than inventing one.
             move_choices = [choice for choice in demo["scene"]["choices"]
-                            if choice.get("effect", {}).get("type") == "move"]
+                            if "destination" in choice.get("effect", {})]
             self.assertTrue(move_choices, "Original fixture must supply a player move choice")
             choice = deepcopy(move_choices[0])
             choice["id"] = "brena-visit-inn"

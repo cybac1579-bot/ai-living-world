@@ -14,48 +14,19 @@ except ModuleNotFoundError:
 @unittest.skipIf(world_engine is None, "original Android engine not unpacked")
 class OfflineTravelOriginalEngineTests(unittest.TestCase):
     def test_explicit_travel_replays_without_gpt_or_time_change(self):
+        # Reuse the existing six-place Brena fixture generator, which derives
+        # its schema from the original live_demo_world.json.
+        import subprocess
+        import sys
         engine_dir=Path(world_engine.__file__).resolve().parent
-        examples=engine_dir / "examples"
-        if not list(examples.glob("*.json")):
-            examples=engine_dir.parent.parent.parent.parent / "examples"
-        print("TRAVEL_FIXTURE_DISCOVERY",str(examples),[p.name for p in examples.glob("*.json")])
-        state=None
-        for file in sorted(examples.glob("*.json")):
-            try:
-                candidate=json.loads(file.read_text(encoding="utf-8"))
-                validate_state(candidate)
-                current=candidate["player"]["location"]
-                if candidate["revision"]==0:
-                    for region_id,region in candidate["regions"].items():
-                        if region.get("neighbors"):
-                            candidate["player"]["location"]=region_id
-                            validate_state(candidate)
-                            state=candidate
-                            break
-                    if state is not None:
-                        break
-            except (ValueError,KeyError,TypeError):
-                pass
-        if state is None:
-            # TEST-ONLY geography: connect two existing regions, never alter game data.
-            for file in sorted(examples.glob("*.json")):
-                try:
-                    candidate=json.loads(file.read_text(encoding="utf-8"))
-                    validate_state(candidate)
-                    ids=list(candidate["regions"])
-                    if candidate["revision"] != 0 or len(ids)<2:
-                        continue
-                    origin_id,destination_id=ids[:2]
-                    candidate["player"]["location"]=origin_id
-                    candidate["regions"][origin_id]["neighbors"]=[destination_id]
-                    candidate["regions"][destination_id]["neighbors"]=[origin_id]
-                    validate_state(candidate)
-                    state=candidate
-                    print("OFFLINE_TRAVEL_TEST_FIXTURE=synthetic_adjacency_existing_regions")
-                    break
-                except (ValueError,KeyError,TypeError):
-                    continue
-        self.assertIsNotNone(state,"Original fixtures lack two valid regions; cannot prove offline travel")
+        repo=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            output=Path(tmp)/"brena.json"
+            subprocess.run([sys.executable,str(repo/"tools"/"build_brena_initial_world.py"),
+                            str(engine_dir),str(output)],check=True,capture_output=True,text=True)
+            state=json.loads(output.read_text(encoding="utf-8"))
+        validate_state(state)
+        self.assertEqual(state["player"]["location"],"BRENA-SQUARE")
         origin=state["player"]["location"]
         destination=state["regions"][origin]["neighbors"][0]
         before_clock={k:state.get(k) for k in ("world_minutes","world_time","day","minute")}

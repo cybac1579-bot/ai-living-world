@@ -40,5 +40,5 @@ def rana_status_payload(engine_state: dict[str, Any], *, seed: int = 1,
         "place_label": KNOWN_PLACES.get(view.npc_place, view.npc_place),
         "activity_id": view.npc_activity,
         "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity, view.npc_activity),
-        "player_present": view.dialogue["player_present"],
+        "player_present": view.dialogue["player_present"] is True,
     }

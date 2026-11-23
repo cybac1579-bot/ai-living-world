@@ -44,7 +44,7 @@ def patch(path: Path) -> None:
         from brena_simulation import BrenaWorld
         from brena_event_adapter import movement_candidates
         advance_clock(result, events[0]["minutes"])
-        if state["world_minutes"] // 60 != result["world_minutes"] // 60:
+        if state.get("world_minutes", 0) // 60 != result["world_minutes"] // 60:
             projected = BrenaWorld.new(seed=1)
             projected.advance_time(result["world_minutes"])
             place_to_region = {

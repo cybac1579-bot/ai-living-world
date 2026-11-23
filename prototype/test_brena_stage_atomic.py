@@ -32,6 +32,34 @@ class StageAtomicTests(unittest.TestCase):
             stage(self.prototype, self.android)
         self.assertFalse((self.android / MODULES[0]).exists())
 
+    def test_existing_identical_module_survives_failed_publish(self):
+        existing = self.android / MODULES[0]
+        existing.write_text(MODULES[0])
+        from tools import stage_brena_android
+        original_link = stage_brena_android.os.link
+        calls = 0
+
+        def fail_second(source, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("simulated interruption")
+            return original_link(source, destination)
+
+        with patch.object(stage_brena_android.os, "link", side_effect=fail_second):
+            with self.assertRaises(OSError):
+                stage(self.prototype, self.android)
+        self.assertEqual(existing.read_text(), MODULES[0])
+        self.assertFalse((self.packaged / MODULES[0]).exists())
+
+    def test_conflicting_existing_module_is_never_overwritten(self):
+        existing = self.packaged / MODULES[0]
+        existing.write_text("keep-original")
+        with self.assertRaises(FileExistsError):
+            stage(self.prototype, self.android)
+        self.assertEqual(existing.read_text(), "keep-original")
+        self.assertFalse((self.android / MODULES[0]).exists())
+
     def test_publish_failure_rolls_back_all_new_files(self):
         from tools import stage_brena_android
         original_link = stage_brena_android.os.link

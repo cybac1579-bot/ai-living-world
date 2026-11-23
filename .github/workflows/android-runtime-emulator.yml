@@ -67,6 +67,22 @@ jobs:
           python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_presentation_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+      - name: Inspect original player movement action contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          for filename in ('world_engine.py', 'android_native/app/src/main/python/vn_server.py'):
+              tree = ast.parse((Path('src') / filename).read_text(encoding='utf-8'))
+              print('MOVEMENT_CONTRACT_SOURCE', filename)
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      name = node.name.lower()
+                      if any(term in name for term in ('move', 'travel', 'action', 'post', 'commit')):
+                          print('MOVEMENT_CONTRACT_FUNCTION', node.lineno, node.name,
+                                [a.arg for a in node.args.args])
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

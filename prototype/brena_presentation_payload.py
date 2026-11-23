@@ -9,12 +9,12 @@ from typing import Any
 from brena_engine_clock_bridge import view_from_engine_state
 
 KNOWN_ACTIVITIES = {
-    "helping": "주민 돕기",
-    "work": "일감 수행",
-    "training": "창술 훈련",
-    "home": "촌장 집에서 생활",
-    "social": "주민 교류",
-    "rest": "휴식",
+    "help_villagers": "주민 돕기",
+    "spear_training": "창술 훈련",
+    "chief_house_life": "촌장 집에서 생활",
+    "socializing": "주민 교류",
+    "personal_rest": "휴식",
+    "idle": "대기",
 }
 
 KNOWN_PLACES = {

@@ -15,6 +15,31 @@ except ModuleNotFoundError:
 
 @unittest.skipIf(EventStore is None, "Android source not extracted")
 class GeneratedBrenaStoreTests(unittest.TestCase):
+    def test_player_travel_choices_from_real_generated_brena_world(self):
+        import world_engine
+        from brena_player_navigation import available_destinations, validate_selected_destination
+        repo = Path(__file__).resolve().parents[1]
+        root = Path(world_engine.__file__).resolve().parent
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "brena.json"
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / "build_brena_initial_world.py"), str(root), str(output)],
+                check=True, capture_output=True, text=True,
+            )
+            state = json.loads(output.read_text(encoding="utf-8"))
+            before = json.loads(json.dumps(state))
+            offered = available_destinations(state)
+            self.assertEqual(
+                {item["id"] for item in offered},
+                {"BRENA-GENERAL-STORE", "BRENA-INN", "BRENA-SMITHY",
+                 "BRENA-CHIEF-HOUSE", "BRENA-GUARD-TRAINING-GROUND"},
+            )
+            self.assertEqual(validate_selected_destination(state, "BRENA-INN"), "BRENA-INN")
+            for forbidden in ("DEMO-FOREST", "BRENA-SQUARE", "BRENA-UNKNOWN"):
+                with self.assertRaises(ValueError):
+                    validate_selected_destination(state, forbidden)
+            self.assertEqual(state, before, "Listing and validating travel cannot move the player")
+
     def test_brena_routes_are_bidirectional_and_no_direction_is_invented(self):
         import world_engine
         repo = Path(__file__).resolve().parents[1]

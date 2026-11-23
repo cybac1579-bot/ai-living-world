@@ -16,6 +16,8 @@ def movement_candidates(world: BrenaWorld, engine_state: dict[str, Any],
                         resident_to_npc: dict[str, str]) -> list[dict[str, str]]:
     regions = engine_state["regions"]
     npcs = engine_state["npcs"]
+    if len(set(place_to_region.values())) != len(place_to_region):
+        raise ValueError("Brena places must map to distinct original regions")
     events = []
     for resident_id, npc_id in resident_to_npc.items():
         if resident_id not in world.residents or npc_id not in npcs:
@@ -25,6 +27,8 @@ def movement_candidates(world: BrenaWorld, engine_state: dict[str, Any],
         if destination not in regions:
             continue
         current = npcs[npc_id]["location"]
+        if current not in regions:
+            continue
         if current == destination:
             continue
         # Never skip over intermediate regions or infer an unregistered route.

@@ -40,6 +40,9 @@ def rana_status_payload(engine_state: dict[str, Any], *, seed: int = 1,
     # The prototype routine is informational until NPC movement events are
     # committed through the original engine. Never show a contradictory place.
     actual_place = actual_rana.removeprefix("BRENA-").lower().replace("-", "_") if present else None
+    # A projected activity is only observable when its projected location
+    # agrees with the authoritative, journaled NPC location.
+    activity_visible = present and actual_place == view.npc_place
     return {
         "npc_id": "rana",
         "name": "라나",
@@ -47,7 +50,7 @@ def rana_status_payload(engine_state: dict[str, Any], *, seed: int = 1,
         "minute": view.minute,
         "place_id": actual_place if present and actual_place in KNOWN_PLACES else None,
         "place_label": KNOWN_PLACES.get(actual_place) if present else None,
-        "activity_id": view.npc_activity if present and view.npc_activity in KNOWN_ACTIVITIES else None,
-        "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity) if present else None,
+        "activity_id": view.npc_activity if activity_visible and view.npc_activity in KNOWN_ACTIVITIES else None,
+        "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity) if activity_visible else None,
         "player_present": present,
     }

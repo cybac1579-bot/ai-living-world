@@ -53,6 +53,26 @@ class GeneratedBrenaStoreTests(unittest.TestCase):
                 cache.unlink()
             self.assertEqual(EventStore(save_dir).load(), committed)
 
+    def test_invalid_player_destination_never_creates_store_revision(self):
+        import world_engine
+        from brena_player_navigation import validate_selected_destination
+        repo = Path(__file__).resolve().parents[1]
+        root = Path(world_engine.__file__).resolve().parent
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "brena.json"
+            subprocess.run(
+                [sys.executable, str(repo / "tools" / "build_brena_initial_world.py"), str(root), str(output)],
+                check=True, capture_output=True, text=True,
+            )
+            initial = json.loads(output.read_text(encoding="utf-8"))
+            save_dir = Path(tmp) / "save"
+            store = EventStore(save_dir)
+            store.create(initial)
+            with self.assertRaises(ValueError):
+                validate_selected_destination(store.load(), "DEMO-FOREST")
+            self.assertEqual(store.load(), initial)
+            self.assertEqual(store.load()["revision"], 0)
+
     def test_player_travel_choices_from_real_generated_brena_world(self):
         import world_engine
         from brena_player_navigation import available_destinations, validate_selected_destination

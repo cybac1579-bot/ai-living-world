@@ -103,6 +103,19 @@ jobs:
       - name: Inspect original engine fixture and store API
         run: |
           grep -nE '^def |^class |^    def ' src/tests/test_engine.py src/world_engine.py | head -110
+      - name: Inspect canonical player choice schema before Brena travel integration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          demo = json.loads(Path("src/examples/live_demo_world.json").read_text(encoding="utf-8"))
+          print("ORIGINAL_SCENE_CHOICES=", json.dumps(demo["scene"]["choices"], ensure_ascii=False))
+          src = Path("src/world_engine.py").read_text(encoding="utf-8").splitlines()
+          for a, b in ((235, 275), (429, 533)):
+              print(f"ORIGINAL_ENGINE_LINES_{a}_{b}")
+              for n in range(a, min(b, len(src)) + 1):
+                  print(f"{n}: {src[n-1]}")
+          PY
       - name: Stage Brena Python modules into Android source and smoke-import
         run: |
           python tools/stage_brena_android.py src

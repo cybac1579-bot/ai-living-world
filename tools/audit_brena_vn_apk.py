@@ -12,6 +12,9 @@ assert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
 assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
 assert "app.brena.destinations" in js, "Android VN travel preview must use server data"
+assert "/api/brena/travel" in js, "Travel button must call offline endpoint"
+assert 'mode="player_travel"' in server, "Offline travel must use original EventStore"
+assert 'if urlsplit(self.path).path == "/api/brena/travel":' in server, "Missing protected offline route"
 assert '"brena": {"rana": rana_status_payload(engine_state),' in server
 assert '"destinations": available_destinations(engine_state)' in server
 assert "from brena_player_navigation import available_destinations" in server
@@ -21,14 +24,18 @@ with ZipFile(apk) as z:
     print("ANDROID_JS_ASSETS",assets)
     found=False
     found_travel=False
+    found_offline_action=False
     for name in assets:
         content=z.read(name)
         if b"brena-rana-status" in content:
             found=True
         if b"brena-travel-preview" in content and b"app.brena.destinations" in content:
             found_travel=True
+        if b"/api/brena/travel" in content and b"X-ALW-CSRF" in content:
+            found_offline_action=True
     assert found, "Compiled APK does not contain Rana UI JavaScript"
     assert found_travel, "Compiled APK does not contain Brena travel preview"
+    assert found_offline_action, "Compiled APK lacks offline travel action"
     packaged_python=[]
     for name in names:
         if not name.endswith((".imy",".zip")):

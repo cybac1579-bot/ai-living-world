@@ -15,6 +15,7 @@ on:
       - 'tools/audit_brena_vn_apk.py'
       - 'tools/inspect_android_clock.py'
       - 'tools/inspect_android_brena_regions.py'
+      - 'tools/build_brena_initial_world.py'
       - 'tools/inspect_android_vn_view.py'
       - 'tools/inspect_android_vn_js.py'
       - 'tools/patch_android_debug_ui.py'
@@ -75,6 +76,7 @@ jobs:
           python tools/inspect_android_engine_save.py src
           python tools/inspect_android_clock.py src
           python tools/inspect_android_brena_regions.py src
+          python tools/build_brena_initial_world.py src /tmp/brena-initial-world.json
           python tools/inspect_android_vn_view.py src
           python tools/inspect_android_vn_js.py src
           python - <<'PY'

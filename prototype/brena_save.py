@@ -33,11 +33,26 @@ def _validated(payload: str) -> BrenaWorld:
             raise ValueError("invalid resident location or activity")
     if not isinstance(world.relations, dict) or not isinstance(world.events, list):
         raise ValueError("invalid relationship or event data")
+    known = set(world.residents) | {"player"}
+    for person, targets in world.relations.items():
+        if not isinstance(person, str) or person not in known or not isinstance(targets, dict):
+            raise ValueError("invalid relation source")
+        for target, state in targets.items():
+            if not isinstance(target, str) or target not in known or target == person or not isinstance(state, dict):
+                raise ValueError("invalid relation target or state")
     for event in world.events:
         if not isinstance(event, dict) or not {"day", "minute", "actor", "subject", "detail"} <= event.keys():
             raise ValueError("invalid event record")
         if not isinstance(event["detail"], str):
             raise ValueError("invalid event detail")
+        day, minute = event["day"], event["minute"]
+        if (not isinstance(day, int) or isinstance(day, bool) or day < 1
+                or not isinstance(minute, int) or isinstance(minute, bool) or not 0 <= minute < 1440
+                or (day, minute) > (world.day, world.minute)):
+            raise ValueError("invalid event time")
+        if (not isinstance(event["actor"], str) or event["actor"] not in known
+                or not isinstance(event["subject"], str) or event["subject"] not in known):
+            raise ValueError("invalid event participants")
     return world
 
 

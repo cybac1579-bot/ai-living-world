@@ -35,13 +35,12 @@ def patch(path: Path) -> None:
         '"world_tick", "player_travel"), "unknown mode")',
         '"world_tick", "player_travel", "brena_world_tick"), "unknown mode")',1)
     source=source.replace(
-        'if mode == "world_tick":\\n        _require(submission is None',
-        'if mode in ("world_tick", "brena_world_tick"):\\n        _require(submission is None',1)
+        'if mode == "world_tick":\n        _require(submission is None',
+        'if mode in ("world_tick", "brena_world_tick"):\n        _require(submission is None',1)
     source=source.replace(
-        '    if mode == "world_tick":\\n        from autonomy import advance_clock',
+        '    if mode == "world_tick":\n        from autonomy import advance_clock',
         '''    if mode == "brena_world_tick":
         from autonomy import advance_clock
-        from brena_engine_clock_bridge import view_from_engine_state
         from brena_simulation import BrenaWorld
         from brena_event_adapter import movement_candidates
         advance_clock(result, events[0]["minutes"])
@@ -71,6 +70,8 @@ def patch(path: Path) -> None:
         return result
     if mode == "world_tick":
         from autonomy import advance_clock''',1)
+    assert 'if mode == "brena_world_tick":' in source
+    assert 'if mode in ("world_tick", "brena_world_tick"):' in source
     path.write_text(source,encoding="utf-8")
     print("BRENA_OFFLINE_TRAVEL_ENGINE_PATCH=PASS",path)
 

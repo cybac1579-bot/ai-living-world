@@ -25,10 +25,7 @@ class RanaOriginalStoreReplayTests(unittest.TestCase):
                 candidate = json.loads(p.read_text(encoding="utf-8"))
                 validate_state(candidate)
                 if candidate["revision"] == 0:
-                    # Legacy validated fixtures may omit the elapsed clock.
-                    # Set its initial value explicitly for the Brena projection.
-                    candidate.setdefault("world_minutes", 0)
-                    validate_state(candidate)
+                    # Preserve the original fixture exactly, including legacy clock absence.
                     initial = candidate
                     break
             except (ValueError, TypeError, KeyError):

@@ -19,11 +19,12 @@ class OfflineTravelOriginalEngineTests(unittest.TestCase):
         import subprocess
         import sys
         engine_dir=Path(world_engine.__file__).resolve().parent
+        source_root=repo/"src"
         repo=Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmp:
             output=Path(tmp)/"brena.json"
             subprocess.run([sys.executable,str(repo/"tools"/"build_brena_initial_world.py"),
-                            str(engine_dir),str(output)],check=True,capture_output=True,text=True)
+                            str(source_root),str(output)],check=True,capture_output=True,text=True)
             state=json.loads(output.read_text(encoding="utf-8"))
         validate_state(state)
         self.assertEqual(state["player"]["location"],"BRENA-SQUARE")

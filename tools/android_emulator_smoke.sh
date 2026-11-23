@@ -41,6 +41,29 @@ if ! grep -Fq 'WebView pageFinished' "$RUNNER_TEMP/alw-startup-log.txt"; then
   exit 1
 fi
 echo "EMULATOR_WEBVIEW_PAGE_FINISHED=PASS (does not prove scene rendering)"
+# Verify the world actually persisted by the embedded Android EventStore.
+# This checks first-run data, not just a bundled asset or a WebView callback.
+save_paths=$(adb shell run-as com.ailivingworld.mobile find files -name initial_state.json -type f 2>/dev/null | tr -d '\r' || true)
+if [[ -z "$save_paths" ]]; then
+  echo "::error::No EventStore initial_state.json found after Android startup"
+  exit 1
+fi
+save_count=$(printf '%s\n' "$save_paths" | grep -c .)
+if [[ "$save_count" -ne 1 ]]; then
+  echo "::error::Expected one Android EventStore initial state, found $save_count"
+  exit 1
+fi
+adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world.json"
+python - <<'PY'
+import json, os
+from pathlib import Path
+p=Path(os.environ['RUNNER_TEMP'])/'alw-initial-world.json'
+state=json.loads(p.read_text(encoding='utf-8'))
+assert state['player']['location']=='BRENA-SQUARE', 'Android EventStore did not initialize in Brena'
+assert 'BRENA-RANA' in state['npcs'], 'Android initial EventStore state lacks Rana'
+print('EMULATOR_BRENA_PERSISTED_FIRST_RUN=PASS')
+PY
+
 if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEMP/alw-startup-log.txt"; then
   echo "::error::Android app process crashed"
   exit 1

@@ -13,7 +13,7 @@ from brena_android_boundary import npc_view, BrenaView
 
 def view_from_engine_state(engine_state: dict[str, Any], npc_id: str, *,
                            seed: int = 1, player_place: str | None = None) -> BrenaView:
-    minutes = engine_state["world_minutes"]
+    minutes = engine_state.get("world_minutes", 0)
     if type(minutes) is not int or minutes < 0:
         raise ValueError("invalid original engine world_minutes")
     if type(seed) is not int:

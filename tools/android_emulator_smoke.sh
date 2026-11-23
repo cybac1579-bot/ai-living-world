@@ -64,6 +64,13 @@ assert 'BRENA-RANA' in state['npcs'], 'Android initial EventStore state lacks Ra
 print('EMULATOR_BRENA_PERSISTED_FIRST_RUN=PASS')
 PY
 # A process restart must reuse the same event journal rather than reseed Brena.
+# Snapshot the complete EventStore data, not only its immutable seed.
+save_dir=${save_paths%/initial_state.json}
+for name in state.json events.jsonl; do
+  if adb shell run-as com.ailivingworld.mobile test -f "$save_dir/$name"; then
+    adb shell run-as com.ailivingworld.mobile cat "$save_dir/$name" > "$RUNNER_TEMP/alw-$name-before"
+  fi
+done
 before_hash=$(sha256sum "$RUNNER_TEMP/alw-initial-world.json" | awk '{print $1}')
 adb shell am force-stop com.ailivingworld.mobile
 adb shell am start -W -n com.ailivingworld.mobile/.MainActivity
@@ -74,6 +81,15 @@ if [[ "$before_hash" != "$after_hash" ]]; then
   echo "::error::Android initial world changed unexpectedly after process restart"
   exit 1
 fi
+for name in state.json events.jsonl; do
+  if [[ -f "$RUNNER_TEMP/alw-$name-before" ]]; then
+    adb shell run-as com.ailivingworld.mobile cat "$save_dir/$name" > "$RUNNER_TEMP/alw-$name-after"
+    cmp "$RUNNER_TEMP/alw-$name-before" "$RUNNER_TEMP/alw-$name-after" || {
+      echo "::error::Android EventStore $name changed unexpectedly on process restart"
+      exit 1
+    }
+  fi
+done
 echo "EMULATOR_BRENA_RESTART_INITIAL_STATE=PASS"
 
 if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEMP/alw-startup-log.txt"; then

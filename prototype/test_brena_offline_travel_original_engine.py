@@ -46,6 +46,16 @@ class OfflineTravelOriginalEngineTests(unittest.TestCase):
             self.assertEqual(after,replay)
             with self.assertRaises(Exception):
                 EventStore(Path(directory)).commit(1,{"destination":"unregistered_place"},{"events":[]},mode="player_travel")
+            # Return to the square using a fresh store instance, then force
+            # a second journal replay. A one-way move is not enough.
+            returned=EventStore(Path(directory)).commit(
+                1,{"destination":origin},{"events":[]},mode="player_travel")
+            self.assertEqual(returned["player"]["location"],origin)
+            self.assertEqual(returned["revision"],2)
+            self.assertEqual({k:returned.get(k) for k in before_clock},before_clock)
+            if (Path(directory)/"state.json").exists():
+                (Path(directory)/"state.json").unlink()
+            self.assertEqual(EventStore(Path(directory)).load(),returned)
 
 if __name__=="__main__":
     unittest.main()

@@ -10,6 +10,7 @@ on:
       - 'tools/inspect_android_integration.py'
       - 'tools/inspect_android_startup.py'
       - 'tools/stage_brena_initial_asset.py'
+      - 'tools/patch_brena_android_first_run.py'
       - 'tools/inspect_android_engine_save.py'
       - 'tools/stage_brena_android.py'
       - 'tools/patch_brena_vn_state.py'
@@ -83,6 +84,7 @@ jobs:
           python tools/inspect_android_brena_regions.py src
           python tools/build_brena_initial_world.py src /tmp/brena-initial-world.json
           python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
           python - <<'PY'
           import json
           from pathlib import Path
@@ -132,6 +134,8 @@ jobs:
           PY
       - name: Stage Brena Python modules into Android source and smoke-import
         run: |
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
           python tools/stage_brena_android.py src
           python tools/patch_brena_world_travel.py src/world_engine.py
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
@@ -194,6 +198,8 @@ jobs:
         run: |
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
           python tools/stage_brena_android.py src
           python tools/patch_brena_world_travel.py src/world_engine.py
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py

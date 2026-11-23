@@ -81,6 +81,52 @@ while pos < len(data):
     if kind==b'IEND':
         break
 assert width>=320 and height>=320 and idat>1000, f'Invalid screenshot: {width}x{height}, {idat} IDAT bytes'
+# Decode PNG scanlines and reject a flat-color screenshot. This does not
+# prove Brena is visible; it catches blank/single-color presentation failures.
+import io
+from collections import Counter
+chunks=[]
+pos=8
+while pos<len(data):
+    size=struct.unpack('>I',data[pos:pos+4])[0]
+    kind=data[pos+4:pos+8]
+    payload=data[pos+8:pos+8+size]
+    if kind==b'IDAT': chunks.append(payload)
+    pos+=size+12
+    if kind==b'IEND': break
+raw=zlib.decompress(b''.join(chunks))
+# PNG images from Android screencap are normally RGB or RGBA, 8 bits/channel.
+bit_depth,color_type=data[24],data[25]
+assert bit_depth==8 and color_type in (2,6), f'Unexpected screenshot format: {bit_depth}/{color_type}'
+channels=3 if color_type==2 else 4
+stride=width*channels
+previous=bytearray(stride)
+offset=0
+colors=set()
+for y in range(height):
+    filt=raw[offset]; offset+=1
+    scan=bytearray(raw[offset:offset+stride]); offset+=stride
+    for x in range(stride):
+        left=scan[x-channels] if x>=channels else 0
+        up=previous[x]
+        upper_left=previous[x-channels] if x>=channels else 0
+        if filt==1: predictor=left
+        elif filt==2: predictor=up
+        elif filt==3: predictor=(left+up)//2
+        elif filt==4:
+            p=left+up-upper_left
+            a,b,c=abs(p-left),abs(p-up),abs(p-upper_left)
+            predictor=left if a<=b and a<=c else (up if b<=c else upper_left)
+        elif filt==0: predictor=0
+        else: raise AssertionError(f'Unsupported PNG filter {filt}')
+        scan[x]=(scan[x]+predictor)&255
+    if y%max(1,height//24)==0:
+        for x in range(0,width,max(1,width//24)):
+            colors.add(bytes(scan[x*channels:x*channels+3]))
+    previous=scan
+assert offset==len(raw), 'Unexpected trailing screenshot pixel data'
+assert len(colors)>=8, f'Visually blank screenshot: only {len(colors)} sampled colors'
 print(f'EMULATOR_SCREENSHOT_PNG=PASS {width}x{height} ({idat} compressed bytes)')
+print(f'EMULATOR_SCREENSHOT_NONBLANK=PASS ({len(colors)} sampled colors; scene content still needs review)')
 PY
 echo "EMULATOR_BOOT_SMOKE=PASS"

@@ -40,19 +40,19 @@ def stage(prototype: Path, android_src: Path) -> list[Path]:
             target = directory / name
             if target.exists() and target.read_bytes() != source_bytes:
                 raise FileExistsError(f"refusing to overwrite existing Android module: {name}")
-            planned.append((origin, target))
+            planned.append((source_bytes, target))
     # Stage all missing files first. On failure, undo only this call's additions.
     pending = []
     published = []
     try:
-        for origin, target in planned:
+        for source_bytes, target in planned:
             if target.exists():
                 continue
             fd, name = tempfile.mkstemp(prefix=".brena-stage-", dir=target.parent)
             temporary = Path(name)
             pending.append((temporary, target))
             with os.fdopen(fd, "wb") as stream:
-                stream.write(origin.read_bytes())
+                stream.write(source_bytes)
                 stream.flush()
                 os.fsync(stream.fileno())
         for temporary, target in pending:

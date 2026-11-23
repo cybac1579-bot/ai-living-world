@@ -10,6 +10,8 @@ on:
       - tools/patch_android_presentation_ui.py
       - tools/patch_android_debug_ui.py
       - tools/stage_brena_android.py
+      - tools/patch_brena_android_first_run.py
+      - tools/stage_brena_initial_asset.py
       - tools/patch_brena_vn_state.py
       - tools/patch_brena_world_travel.py
       - tools/patch_brena_vn_travel.py
@@ -34,6 +36,8 @@ jobs:
         run: |
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
           python tools/stage_brena_android.py src
           python tools/patch_brena_world_travel.py src/world_engine.py
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py

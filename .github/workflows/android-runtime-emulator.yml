@@ -12,6 +12,7 @@ on:
       - tools/stage_brena_android.py
       - tools/patch_brena_vn_state.py
       - tools/patch_brena_world_travel.py
+      - tools/patch_brena_vn_travel.py
       - tools/patch_brena_vn_ui.py
       - tools/audit_brena_vn_apk.py
       - prototype/**
@@ -36,6 +37,7 @@ jobs:
           python tools/stage_brena_android.py src
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
           python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_ui.py src
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld

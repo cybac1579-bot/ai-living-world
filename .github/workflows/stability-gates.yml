@@ -12,6 +12,7 @@ on:
       - 'tools/stage_brena_android.py'
       - 'tools/patch_brena_vn_state.py'
       - 'tools/patch_brena_vn_ui.py'
+      - 'tools/audit_brena_vn_apk.py'
       - 'tools/inspect_android_clock.py'
       - 'tools/inspect_android_vn_view.py'
       - 'tools/inspect_android_vn_js.py'
@@ -162,6 +163,8 @@ jobs:
         run: |
           test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk
           ls -lh src/android_native/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify compiled APK includes Rana VN UI and status bridge
+        run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       - name: Audit whether staged Brena modules are actually packaged in APK
         run: |
           python - <<'PY'
@@ -185,3 +188,4 @@ jobs:
               print('BRENA_NESTED_PYTHON_ENTRIES', nested)
               assert matched or nested, 'APK does not package staged Brena modules'
           PY
+

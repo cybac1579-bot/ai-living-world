@@ -31,6 +31,8 @@ class AndroidStatePatchContractTests(unittest.TestCase):
             updated = target.read_text(encoding="utf-8")
             self.assertIn("engine_state = self.store.load()", updated)
             self.assertIn("rana_status_payload(engine_state)", updated)
+            self.assertIn("available_destinations(engine_state)", updated)
+            self.assertIn("from brena_player_navigation import available_destinations", updated)
             self.assertNotIn("player_place=request", updated)
             self.assertNotIn("player_place=params", updated)
             self.assertEqual(updated.count('"brena": {"rana":'), 1)

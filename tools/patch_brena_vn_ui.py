@@ -33,6 +33,20 @@ def patch(path: Path) -> None:
     brenaClock.textContent=validClock?
       ('브레나 · '+clock.day+'일차 '+String(Math.floor(clock.minute/60)).padStart(2,'0')+
        ':'+String(clock.minute%60).padStart(2,'0')):'';
+    // Adjacent travel preview only: no automatic movement or invented action.
+    let travelPreview=document.getElementById('brena-travel-preview');
+    if (!travelPreview) {
+      travelPreview=document.createElement('span');
+      travelPreview.id='brena-travel-preview';
+      travelPreview.style.cssText='display:block;font-size:11px;opacity:.75;line-height:1.4';
+      $('place').insertAdjacentElement('afterend',travelPreview);
+    }
+    const destinations=app.brena && app.brena.destinations;
+    const validDestinations=Array.isArray(destinations) && destinations.every(
+      d=>d && typeof d.id==='string' && typeof d.name==='string');
+    travelPreview.hidden=!validDestinations || destinations.length===0;
+    travelPreview.textContent=travelPreview.hidden?'':
+      ('인접 장소 · '+destinations.map(d=>d.name).join(' · '));
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

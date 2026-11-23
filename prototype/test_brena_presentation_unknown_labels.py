@@ -32,7 +32,7 @@ class UnknownLabelBoundaryTests(unittest.TestCase):
             npc_activity="spear_training",
         )
         with patch("brena_presentation_payload.view_from_engine_state", return_value=view):
-            result = rana_status_payload({})
+            result = rana_status_payload({"player": {"location": "BRENA-SQUARE"}, "npcs": {"BRENA-RANA": {"location": "BRENA-SQUARE"}}})
         self.assertEqual(result["place_label"], "마을 광장")
         self.assertEqual(result["activity_label"], "창술 훈련")
 

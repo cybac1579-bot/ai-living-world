@@ -226,6 +226,14 @@ jobs:
           ls -lh src/android_native/app/build/outputs/apk/debug/app-debug.apk
       - name: Verify compiled APK includes Rana VN UI and status bridge
         run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
+      - name: Publish debug APK for Android smoke testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-living-world-brena-debug-apk
+          path: src/android_native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
       - name: Audit whether staged Brena modules are actually packaged in APK
         run: |
           python - <<'PY'

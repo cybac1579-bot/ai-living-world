@@ -83,7 +83,27 @@ jobs:
         with:
           gradle-version: '9.6.0'
       - name: Compile x86_64 debug APK for emulator
-        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          # Avoid repeated immediate requests if Maven Central rate-limits Chaquopy.
+          for attempt in 1 2 3; do
+            echo "Emulator APK build attempt ${attempt}/3"
+            if gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/alw-emulator-gradle.log; then
+              exit 0
+            fi
+            if ! grep -Eiq 'status code 429|HTTP 429|Too Many Requests' /tmp/alw-emulator-gradle.log; then
+              echo "::error::Non-rate-limit Gradle failure; not retrying."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Chaquopy dependency remained rate-limited."
+              exit 1
+            fi
+            if [ "$attempt" -eq 1 ]; then wait_seconds=45; else wait_seconds=120; fi
+            echo "::warning::HTTP 429; waiting ${wait_seconds}s before retry."
+            sleep "$wait_seconds"
+          done
       - name: Verify x86_64 emulator APK contains Rana UI and Python bridge
         run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       # The 2026-11-23 run failed before Android boot: emulator FATAL said

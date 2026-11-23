@@ -12,6 +12,7 @@ on:
       - tools/stage_brena_android.py
       - tools/patch_brena_vn_state.py
       - tools/patch_brena_vn_ui.py
+      - tools/audit_brena_vn_apk.py
       - prototype/**
   workflow_dispatch:
 
@@ -82,6 +83,8 @@ jobs:
           gradle-version: '9.6.0'
       - name: Compile x86_64 debug APK for emulator
         run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify x86_64 emulator APK contains Rana UI and Python bridge
+        run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       # The 2026-11-23 run failed before Android boot: emulator FATAL said
       # only 7033 MB free while userdata creation required 7373 MB.
       # Remove unused preinstalled runner SDKs after APK compilation.

@@ -18,6 +18,8 @@ def movement_candidates(world: BrenaWorld, engine_state: dict[str, Any],
     npcs = engine_state["npcs"]
     if len(set(place_to_region.values())) != len(place_to_region):
         raise ValueError("Brena places must map to distinct original regions")
+    if len(set(resident_to_npc.values())) != len(resident_to_npc):
+        raise ValueError("Brena residents must map to distinct original NPCs")
     events = []
     for resident_id, npc_id in resident_to_npc.items():
         if resident_id not in world.residents or npc_id not in npcs:

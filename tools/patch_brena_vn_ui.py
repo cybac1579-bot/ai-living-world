@@ -129,9 +129,9 @@ def patch(path: Path) -> None:
     }
     timeActions.hidden=!validClock;
     const rana=app.brena && app.brena.rana;
-    ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
+    ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label);
     // Never reveal a remote NPC's location/activity to an absent player.
-    ranaBadge.textContent=ranaBadge.hidden?'':('라나 · '+rana.activity_label);
+    ranaBadge.textContent=ranaBadge.hidden?'':('라나'+(rana.activity_label?' · '+rana.activity_label:''));
 """
     source=source.replace(anchor,anchor+"\n"+addition,1)
     path.write_text(source,encoding="utf-8")

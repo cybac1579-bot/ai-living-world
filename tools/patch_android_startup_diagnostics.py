@@ -77,11 +77,11 @@ def main():
     s=exact(s, '                    webView.loadUrl(result);',
        '                    pageFailed = false;\n'
        '                    uiError("진단 D4 | 단계 4: 내부 페이지 로딩 중");\n'
-       '                    if (webView == null) {\\n'
-       '                        Log.e("ALW_BOOT", "WebView missing before loadUrl");\\n'
-       '                        uiError("진단 D4 | WebView 초기화 실패");\\n'
-       '                    } else {\\n'
-       '                        webView.loadUrl(result);\\n'
+       '                    if (webView == null) {\n'
+       '                        Log.e("ALW_BOOT", "WebView missing before loadUrl");\n'
+       '                        uiError("진단 D4 | WebView 초기화 실패");\n'
+       '                    } else {\n'
+       '                        webView.loadUrl(result);\n'
        '                    }')
     s=exact(s,
        '            } catch (Exception ex) {\n'

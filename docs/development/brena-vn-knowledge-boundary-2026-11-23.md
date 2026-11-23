@@ -23,3 +23,10 @@
 2. Android `/api/state` 응답에서 원격 NPC 내부 위치/활동을 클라이언트에 노출하지 않도록 별도 관찰 경계 구축.
 3. 실제 화면에서 NPC 표시와 숨김을 확인하고 기존 엔진 저장/복원 회귀 검증.
 4. PR #2 검토 후 main 병합. 브랜치 보호 설정은 별도 확인 전 미확인으로 유지.
+
+## 10:09 KST 후속 수정 — 프레젠테이션 데이터 최소화
+- 변경: `prototype/brena_presentation_payload.py`에서 `player_present`가 참이 아닌 경우 라나의 `place_id/place_label/activity_id/activity_label`을 모두 `None`으로 반환한다. 화면 숨김뿐 아니라 프레젠테이션 응답에서 원격 활동 정보를 제거한다.
+- 검증 추가: `prototype/test_brena_ui_knowledge_boundary.py`에 위치 미지정/다른 위치일 때 네 필드 비노출 검사 추가.
+- 이 변경은 **프레젠테이션 함수의 경계**이며 실제 Android HTTP `/api/state`의 원본 내부 상태가 별도로 노출되는지 아직 확인해야 한다. 이를 API 보안 완료로 간주하지 않는다.
+- 사용자 확정 세계관/저장 스키마/인증/GPT 설정은 변경하지 않았다.
+- CI 결과 및 Android 실행은 별도로 확인할 때까지 미검증.

@@ -30,15 +30,23 @@ KNOWN_PLACES = {
 def rana_status_payload(engine_state: dict[str, Any], *, seed: int = 1,
                         player_place: str | None = None) -> dict[str, Any]:
     """Only public NPC status, with no invented speech or relationship claims."""
+    # Never use a projected NPC location to claim the authoritative engine
+    # moved her. Colocation is determined only by the persisted EventStore.
+    actual_player = engine_state.get("player", {}).get("location")
+    actual_rana = engine_state.get("npcs", {}).get("BRENA-RANA", {}).get("location")
+    present = (isinstance(actual_player, str) and
+               isinstance(actual_rana, str) and actual_player == actual_rana)
     view = view_from_engine_state(engine_state, "rana", seed=seed, player_place=player_place)
-    present = view.dialogue["player_present"] is True
+    # The prototype routine is informational until NPC movement events are
+    # committed through the original engine. Never show a contradictory place.
+    actual_place = actual_rana.removeprefix("BRENA-").lower().replace("-", "_") if present else None
     return {
         "npc_id": "rana",
         "name": "라나",
         "day": view.day,
         "minute": view.minute,
-        "place_id": view.npc_place if present and view.npc_place in KNOWN_PLACES else None,
-        "place_label": KNOWN_PLACES.get(view.npc_place) if present else None,
+        "place_id": actual_place if present and actual_place in KNOWN_PLACES else None,
+        "place_label": KNOWN_PLACES.get(actual_place) if present else None,
         "activity_id": view.npc_activity if present and view.npc_activity in KNOWN_ACTIVITIES else None,
         "activity_label": KNOWN_ACTIVITIES.get(view.npc_activity) if present else None,
         "player_present": present,

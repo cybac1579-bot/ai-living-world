@@ -14,7 +14,7 @@ on:
       - tools/patch_brena_vn_ui.py
       - tools/audit_brena_vn_apk.py
       - prototype/**
-      - tools/patch_brena_vn_state.py
+      - source/AI_Living_World_Android_v1.3.zip
   workflow_dispatch:
 
 permissions:

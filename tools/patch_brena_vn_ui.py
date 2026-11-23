@@ -33,7 +33,7 @@ def patch(path: Path) -> None:
     brenaClock.textContent=validClock?
       ('브레나 · '+clock.day+'일차 '+String(Math.floor(clock.minute/60)).padStart(2,'0')+
        ':'+String(clock.minute%60).padStart(2,'0')):'';
-    // Adjacent travel preview only: no automatic movement or invented action.
+    // Travel is always an explicit user click; reuse the existing approved turn path.
     let travelPreview=document.getElementById('brena-travel-preview');
     if (!travelPreview) {
       travelPreview=document.createElement('span');
@@ -47,6 +47,31 @@ def patch(path: Path) -> None:
     travelPreview.hidden=!validDestinations || destinations.length===0;
     travelPreview.textContent=travelPreview.hidden?'':
       ('인접 장소 · '+destinations.map(d=>d.name).join(' · '));
+    let travelActions=document.getElementById('brena-travel-actions');
+    if (!travelActions) {
+      travelActions=document.createElement('div');
+      travelActions.id='brena-travel-actions';
+      travelActions.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin:6px 0';
+      travelPreview.insertAdjacentElement('afterend',travelActions);
+    }
+    travelActions.replaceChildren();
+    if (validDestinations) destinations.forEach(d=>{
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.textContent='이동 · '+d.name;
+      btn.style.cssText='font-size:12px;padding:6px 9px';
+      btn.disabled=sending;
+      btn.addEventListener('click',()=>{
+        if (sending || !app || !app.brena ||
+            !Array.isArray(app.brena.destinations) ||
+            !app.brena.destinations.some(x=>x.id===d.id)) return;
+        // The original resolver accepts exact canonical region IDs.
+        // No background action, direct state mutation or synthetic NPC speech.
+        sendTurn({free_text:'이동: '+d.id});
+      });
+      travelActions.appendChild(btn);
+    });
+    travelActions.hidden=!validDestinations || destinations.length===0;
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

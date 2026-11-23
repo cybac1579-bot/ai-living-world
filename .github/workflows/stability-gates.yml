@@ -9,6 +9,7 @@ on:
       - 'prototype/**'
       - 'tools/inspect_android_integration.py'
       - 'tools/inspect_android_startup.py'
+      - 'tools/stage_brena_initial_asset.py'
       - 'tools/inspect_android_engine_save.py'
       - 'tools/stage_brena_android.py'
       - 'tools/patch_brena_vn_state.py'
@@ -81,6 +82,15 @@ jobs:
           python tools/inspect_android_clock.py src
           python tools/inspect_android_brena_regions.py src
           python tools/build_brena_initial_world.py src /tmp/brena-initial-world.json
+          python tools/stage_brena_initial_asset.py src
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path('src/android_native/app/src/main/assets/examples/brena_initial_world.json').read_text(encoding='utf-8'))
+          assert a['player']['location']=='BRENA-SQUARE'
+          assert 'BRENA-RANA' in a['npcs']
+          print('BRENA_ANDROID_ASSET_CONTRACT=PASS')
+          PY
           python tools/inspect_android_vn_view.py src
           python tools/inspect_android_vn_js.py src
           python - <<'PY'

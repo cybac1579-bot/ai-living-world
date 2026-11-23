@@ -35,6 +35,7 @@ jobs:
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
           python tools/stage_brena_android.py src
+          python tools/patch_brena_world_travel.py src/world_engine.py
           python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
           python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py

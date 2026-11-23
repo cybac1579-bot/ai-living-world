@@ -14,6 +14,7 @@ on:
       - tools/patch_brena_vn_ui.py
       - tools/audit_brena_vn_apk.py
       - prototype/**
+      - tools/patch_brena_vn_state.py
   workflow_dispatch:
 
 permissions:

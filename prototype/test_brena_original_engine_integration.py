@@ -21,6 +21,24 @@ except ModuleNotFoundError:
 
 @unittest.skipIf(EventStore is None, 'original Android engine not unpacked in prototype-only job')
 class OriginalEngineIntegrationTests(unittest.TestCase):
+    def test_duplicate_npc_mapping_is_rejected_before_event_creation(self):
+        world = BrenaWorld.new()
+        with self.assertRaisesRegex(ValueError, "distinct original NPCs"):
+            movement_candidates(
+                world, {"regions": {}, "npcs": {}},
+                place_to_region={"square": "square_region"},
+                resident_to_npc={"rana": "same", "chief": "same"},
+            )
+
+    def test_duplicate_place_mapping_is_rejected_before_event_creation(self):
+        world = BrenaWorld.new()
+        with self.assertRaisesRegex(ValueError, "distinct original regions"):
+            movement_candidates(
+                world, {"regions": {}, "npcs": {}},
+                place_to_region={"square": "same", "inn": "same"},
+                resident_to_npc={"rana": "rana"},
+            )
+
     def test_movement_candidate_commits_and_replays(self):
         # The original Android source includes test fixtures; use its own
         # validated initial state, not an invented engine schema.

@@ -2,12 +2,22 @@
 from pathlib import Path
 from zipfile import ZipFile
 from io import BytesIO
+import json
 import sys
 
 root=Path(sys.argv[1])
 apk=Path(sys.argv[2])
 js=(root/"android_native/app/src/main/assets/web/app.js").read_text(encoding="utf-8")
 server=(root/"android_native/app/src/main/python/vn_server.py").read_text(encoding="utf-8")
+asset_path=root/"android_native/app/src/main/assets/examples/brena_initial_world.json"
+initial=json.loads(asset_path.read_text(encoding="utf-8"))
+assert initial["player"]["location"]=="BRENA-SQUARE", "Brena must be the first-run player location"
+assert "BRENA-RANA" in initial["npcs"], "Brena initial world must contain Rana"
+mobile=(root/"android_native/app/src/main/python/mobile_embedded.py").read_text(encoding="utf-8")
+java=(root/"android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java").read_text(encoding="utf-8")
+assert "return private, brena, web" in mobile, "Embedded server does not select Brena sample"
+assert "store = initial_demo_store(save,sample_file=sample)" in mobile, "Existing EventStore startup must be preserved"
+assert '"examples/brena_initial_world.json"' in java, "Java must copy Brena packaged asset"
 assert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
 assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
@@ -20,6 +30,9 @@ assert '"destinations": available_destinations(engine_state)' in server
 assert "from brena_player_navigation import available_destinations" in server
 with ZipFile(apk) as z:
     names=z.namelist()
+    brena_assets=[name for name in names if name.endswith("examples/brena_initial_world.json")]
+    assert brena_assets, "Compiled APK does not contain Brena first-run world asset"
+    assert any(json.loads(z.read(name).decode("utf-8"))["player"]["location"]=="BRENA-SQUARE" for name in brena_assets), "Compiled Brena asset has wrong start"
     assets=[x for x in names if x.endswith("app.js")]
     print("ANDROID_JS_ASSETS",assets)
     found=False

@@ -40,4 +40,32 @@ if grep -Eq "FATAL EXCEPTION|Process: com\\.ailivingworld\\.mobile" "$RUNNER_TEM
 fi
 adb shell screencap -p /sdcard/alw-screen.png
 adb pull /sdcard/alw-screen.png "$RUNNER_TEMP/alw-screen.png" > /dev/null
+python - <<'PY'
+# A pageFinished callback alone does not establish a real screenshot.
+# Validate the captured PNG signature, dimensions and compressed image chunks.
+import os, struct, zlib
+from pathlib import Path
+p=Path(os.environ['RUNNER_TEMP'])/'alw-screen.png'
+data=p.read_bytes()
+assert data.startswith(b'\x89PNG\r\n\x1a\n'), 'Screenshot is not PNG'
+pos=8
+width=height=0
+idat=0
+while pos < len(data):
+    assert pos+12 <= len(data), 'Truncated PNG chunk'
+    size=struct.unpack('>I',data[pos:pos+4])[0]
+    kind=data[pos+4:pos+8]
+    payload=data[pos+8:pos+8+size]
+    crc=struct.unpack('>I',data[pos+8+size:pos+12+size])[0]
+    assert len(payload)==size and zlib.crc32(kind+payload)==crc, 'Corrupt screenshot PNG chunk'
+    if kind==b'IHDR':
+        width,height=struct.unpack('>II',payload[:8])
+    if kind==b'IDAT':
+        idat+=size
+    pos+=12+size
+    if kind==b'IEND':
+        break
+assert width>=320 and height>=320 and idat>1000, f'Invalid screenshot: {width}x{height}, {idat} IDAT bytes'
+print(f'EMULATOR_SCREENSHOT_PNG=PASS {width}x{height} ({idat} compressed bytes)')
+PY
 echo "EMULATOR_BOOT_SMOKE=PASS"

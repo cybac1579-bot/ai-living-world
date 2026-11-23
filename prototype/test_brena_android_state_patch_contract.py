@@ -37,6 +37,18 @@ class AndroidStatePatchContractTests(unittest.TestCase):
             self.assertNotIn("player_place=params", updated)
             self.assertEqual(updated.count('"brena": {"rana":'), 1)
 
+    def test_navigation_state_is_read_only_and_uses_engine_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "vn_server.py"
+            target.write_text(ORIGINAL, encoding="utf-8")
+            patch(target)
+            updated = target.read_text(encoding="utf-8")
+            self.assertIn('"destinations": available_destinations(engine_state)', updated)
+            self.assertEqual(updated.count("self.store.load()"), 1)
+            self.assertNotIn("self.store.commit(", updated)
+            self.assertNotIn("player_move", updated)
+            self.assertNotIn("world_minutes +", updated)
+
     def test_unrecognized_source_fails_without_partial_write(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "vn_server.py"

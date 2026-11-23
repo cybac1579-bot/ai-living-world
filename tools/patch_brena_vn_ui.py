@@ -72,6 +72,10 @@ def patch(path: Path) -> None:
       travelActions.appendChild(btn);
     });
     travelActions.hidden=!validDestinations || destinations.length===0;
+    // Offline preview cannot submit turns: never imply movement succeeded.
+    if (!app.models || !app.models.length) {
+      Array.from(travelActions.children).forEach(btn=>{btn.disabled=true;btn.title='오프라인 이동은 아직 준비 중이야';});
+    }
     const rana=app.brena && app.brena.rana;
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label && rana.activity_label);
     // Never reveal a remote NPC's location/activity to an absent player.

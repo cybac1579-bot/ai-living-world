@@ -117,6 +117,24 @@ if [[ "$foreground" != *"com.ailivingworld.mobile"* ]]; then
 fi
 adb shell screencap -p /sdcard/alw-screen.png
 adb pull /sdcard/alw-screen.png "$RUNNER_TEMP/alw-screen.png" > /dev/null
+# Check the accessibility tree again at the exact screenshot stage. Android
+# system ANR dialogs can appear after the initial UI dump or after restart.
+adb shell uiautomator dump /sdcard/alw-ui-final.xml > /dev/null
+adb shell cat /sdcard/alw-ui-final.xml > "$RUNNER_TEMP/alw-ui-final.xml"
+python - <<'PY'
+import os
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-ui-final.xml').getroot()
+texts=[node.get('text','') for node in root.iter() if node.get('text')]
+descriptions=[node.get('content-desc','') for node in root.iter() if node.get('content-desc')]
+visible=texts+descriptions
+blocking=("isn't responding", "is not responding", "keeps stopping", "has stopped", "응답하지 않습니다", "계속 중단됨")
+assert not any(any(marker in value for marker in blocking) for value in visible), (
+    'Android system error dialog is covering the final game screenshot: '+repr(visible[:30])
+)
+print('EMULATOR_FINAL_SCREEN_DIALOG_CHECK=PASS')
+PY
 python - <<'PY'
 # A pageFinished callback alone does not establish a real screenshot.
 # Validate the captured PNG signature, dimensions and compressed image chunks.

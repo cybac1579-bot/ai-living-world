@@ -52,6 +52,10 @@ STYLE = """
   bottom: 18dvh;
   right: 0;
   pointer-events: none;
+  /* The approved temporary portrait contains a forest backdrop, not alpha.
+     Feather its rectangular edges rather than pretending it is a cutout. */
+  -webkit-mask-image: radial-gradient(ellipse 76% 77% at 52% 49%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 76% 77% at 52% 49%, #000 58%, transparent 100%);
   filter: drop-shadow(0 10px 18px rgba(17,15,31,.25));
 }
 #brena-rana-portrait[hidden] { display: none !important; }

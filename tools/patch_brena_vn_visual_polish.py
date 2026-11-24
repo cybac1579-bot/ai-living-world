@@ -29,6 +29,26 @@ STYLE = """
   border-radius: 14px;
   color: #f3f5fa;
 }
+/* The in-world activity indicator is only visible when the player is colocated. */
+#brena-rana-status:not([hidden]) {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  margin-top: 6px;
+  border: 1px solid rgba(223,168,143,.55);
+  border-radius: 999px;
+  background: rgba(70,41,41,.65);
+  color: #fff1e9;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  font-weight: 600;
+}
+#brena-rana-status[hidden] { display: none !important; }
+#brena-world-clock:not([hidden]) {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+}
 #speaker-flag { font-weight: 700; letter-spacing: .02em; }
 @media (max-width: 480px) {
   #panel.dialogue-panel { border-radius: 14px; }

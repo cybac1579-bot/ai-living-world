@@ -30,6 +30,9 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 self.assertIn("typeof p.speaker.name === 'string'", js)
                 self.assertIn("#brena-rana-status[hidden]", css)
                 self.assertIn("#brena-world-clock:not([hidden])", css)
+                self.assertIn("#brena-travel-actions > summary", css)
+                self.assertIn("#brena-travel-actions:not([open]) > button", css)
+                self.assertIn("#brena-time-actions[hidden]", css)
             self.assertFalse(list(root.rglob("*.png")))
 
     def test_unknown_renderer_fails_closed(self):

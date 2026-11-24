@@ -376,6 +376,22 @@ PY
 adb shell screencap -p /sdcard/alw-rana-colocation.png
 adb pull /sdcard/alw-rana-colocation.png "$RUNNER_TEMP/alw-rana-colocation.png" > /dev/null
 echo "EMULATOR_RANA_COLOCATION_CAPTURE=PASS (button visibility requires screenshot review)"
+# Close the expanded travel menu so the colocated NPC action is not obscured.
+adb shell input tap 120 120
+sleep 1
+adb shell uiautomator dump /sdcard/alw-rana-observation.xml > /dev/null
+adb shell cat /sdcard/alw-rana-observation.xml > "$RUNNER_TEMP/alw-rana-observation.xml"
+python - <<'PY'
+import os
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-rana-observation.xml').getroot()
+texts=[node.get('text','') for node in root.iter() if node.get('text')]
+assert '라나 살펴보기' in texts, 'Rana observation action missing after confirmed colocation: '+repr(texts[:35])
+print('EMULATOR_RANA_OBSERVATION_ACTION_VISIBLE=PASS')
+PY
+adb shell screencap -p /sdcard/alw-rana-observation.png
+adb pull /sdcard/alw-rana-observation.png "$RUNNER_TEMP/alw-rana-observation.png" > /dev/null
 
 
 echo "EMULATOR_BOOT_SMOKE=PASS"

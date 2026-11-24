@@ -258,7 +258,8 @@ done
 echo "EMULATOR_ACTION_PANEL_READ_ONLY_CAPTURE=PASS (offline preview may have zero choices)"
 # Open the travel menu only; this is not permission to select a destination.
 # Keep the screenshot for a human review of the actual Android control.
-adb shell input keyevent 4
+# Close the action panel through its own toggle; Android Back can exit the Activity.
+adb shell input tap 79 582
 sleep 1
 adb shell input tap 160 145
 sleep 2

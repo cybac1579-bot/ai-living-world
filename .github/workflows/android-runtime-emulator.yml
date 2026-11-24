@@ -178,7 +178,7 @@ jobs:
           # The prior swiftshader_indirect runs lost emulator-5554 before Android booted.
           # Use software rendering without the deprecated indirect backend and allow
           # extra time on hosted runners. This is an emulator-only smoke test.
-          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader -no-metrics -partition-size 2048
+          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader -no-metrics -partition-size 2048 -memory 1536
           emulator-boot-timeout: 900
           disable-animations: true
           script: bash tools/android_emulator_smoke.sh

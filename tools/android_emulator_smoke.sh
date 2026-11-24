@@ -73,6 +73,15 @@ print('EMULATOR_RANA_COLOCATION='+('PRESENT' if rana_location==player_location e
 print('EMULATOR_RANA_LOCATION='+rana_location)
 print('EMULATOR_PLAYER_LOCATION='+player_location)
 print('EMULATOR_RANA_OBSERVATION_EXPECTED='+('VISIBLE' if rana_location==player_location else 'HIDDEN'))
+# The initial scene must offer a legal, player-selected route to Rana.
+# This only inspects the graph: it never moves the player or commits a turn.
+regions=state['regions']
+assert player_location in regions and rana_location in regions, 'Missing Brena region'
+neighbors=regions[player_location].get('neighbors', [])
+assert rana_location in neighbors, 'Rana is unreachable from the first-run player location'
+assert player_location in regions[rana_location].get('neighbors', []), 'No return path from Rana location'
+print('EMULATOR_RANA_ROUTE_AVAILABLE=PASS (player must explicitly choose travel)')
+
 
 print('EMULATOR_BRENA_PERSISTED_FIRST_RUN=PASS')
 PY

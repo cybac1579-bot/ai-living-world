@@ -29,6 +29,8 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 self.assertIn("typeof p.speaker === 'string'", js)
                 self.assertIn("typeof p.speaker.name === 'string'", js)
                 self.assertIn("#brena-rana-status[hidden]", css)
+                self.assertIn("#brena-observe-rana:not([hidden])", css)
+                self.assertIn("#brena-observe-rana[hidden]", css)
                 self.assertIn("#brena-world-clock:not([hidden])", css)
                 self.assertIn("#brena-travel-actions > summary", css)
                 self.assertIn("#brena-travel-actions:not([open]) > button", css)

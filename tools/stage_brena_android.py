@@ -13,6 +13,7 @@ from pathlib import Path
 MODULES = (
     "brena_simulation.py",
     "brena_dialogue_context.py",
+    "brena_engine_dialogue_evidence.py",
     "brena_android_boundary.py",
     "brena_event_adapter.py",
     "brena_clock_projection.py",

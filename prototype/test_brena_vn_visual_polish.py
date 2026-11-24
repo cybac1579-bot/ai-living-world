@@ -26,6 +26,8 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 self.assertIn('[data-brena-speaker="leticia"]', css)
                 self.assertIn('[data-brena-speaker="rana"]', css)
                 self.assertIn("#panel.narration-panel", css)
+                self.assertIn("typeof p.speaker === 'string'", js)
+                self.assertIn("typeof p.speaker.name === 'string'", js)
                 self.assertIn("#brena-rana-status[hidden]", css)
                 self.assertIn("#brena-world-clock:not([hidden])", css)
             self.assertFalse(list(root.rglob("*.png")))

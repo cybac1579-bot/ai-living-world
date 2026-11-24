@@ -53,6 +53,26 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 "Array.from(travelActions.children).forEach(b=>{b.disabled=true;});",
                 result)
 
+    def test_speaker_cards_are_only_engine_authored(self):
+        from patch_brena_vn_visual_polish import patch as patch_visual
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            parent = root / "web"
+            parent.mkdir(parents=True)
+            (parent / "app.js").write_text(
+                "    styleSpeaker(dialogue ? p.speaker : null);\n", encoding="utf-8")
+            (parent / "style.css").write_text("", encoding="utf-8")
+            patch_visual(root)
+            js = (parent / "app.js").read_text(encoding="utf-8")
+            self.assertIn("speakerName === '라나' ? 'rana'", js)
+            self.assertIn("speakerName === '레티시아' ? 'leticia'", js)
+            self.assertIn("if (speakerKey) $('panel').dataset.brenaSpeaker = speakerKey;", js)
+            self.assertIn("else delete $('panel').dataset.brenaSpeaker;", js)
+            css = (parent / "style.css").read_text(encoding="utf-8")
+            self.assertIn('rgba(232,244,255,.97)', css)
+            self.assertIn('rgba(255,244,238,.97)', css)
+            self.assertIn("#panel.narration-panel", css)
+
     def test_unknown_renderer_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

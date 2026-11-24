@@ -167,6 +167,14 @@ jobs:
           assert EventStore is not None
           print('BRENA_ANDROID_STAGING=PASS')
           PY
+      - name: Exercise typed Rana conversation and restored memory in mobile Chromium
+        run: |
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python tools/check_rana_engine.py src
+          python tools/check_rana_android_http.py src
+          python -m pip install playwright
+          CHROMIUM="$(command -v google-chrome)" python tools/test_rana_dialogue_android.py src
       - name: Check original world engine syntax
         run: python -m py_compile src/world_engine.py src/vn_server.py
       - name: Verify patched VN server responds with Brena clock from legacy save

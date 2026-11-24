@@ -6,6 +6,10 @@ RANA = "BRENA-RANA"
 PREFIX = "brena-talk-"
 
 
+def asks_for_recall(text):
+    return any(phrase in text for phrase in ("기억해", "기억나", "기억하니", "기억하고 있", "전에 했던 말"))
+
+
 def talk(store, revision, text):
     state = store.load()
     if type(revision) is not int or revision != state["revision"]:
@@ -19,15 +23,21 @@ def talk(store, revision, text):
     except PermissionError as exc:
         raise WorldError("라나와 같은 장소에서 말을 걸어줘.") from exc
     memories = state["npcs"][RANA].get("memories", [])
-    previous = next((m["text"] for m in reversed(memories) if m["id"].startswith(PREFIX)), None)
     place = state["regions"][evidence["place_id"]]["name"]
     activity = evidence["activity_id"]
-    if any(word in text for word in ("기억", "지난번", "아까", "전에 했던")):
+    if asks_for_recall(text):
+        previous = next(
+            (m["text"] for m in reversed(memories)
+             if m["id"].startswith(PREFIX) and not asks_for_recall(m["text"])),
+            None,
+        )
         reply = f"응. 지난번에 ‘{previous}’라고 했지. 그 얘기를 더 하고 싶어?" if previous else "우리가 전에 나눈 말은 아직 떠오르지 않아. 들려줄래?"
     elif any(word in text for word in ("경비대", "경비병")):
         reply = "경비대에 들어가고 싶어. 창을 잘 쓰는 것만으로는 부족하대. 그래도 해 볼 거야."
-    elif any(word in text for word in ("촌장", "아버지")):
-        reply = "촌장님은 내가 다칠까 봐 걱정하셔. 그 마음을 아니까, 내 얘기도 끝까지 들어주셨으면 해."
+    elif "촌장" in text:
+        reply = "촌장님이 내 꿈을 응원해 주시는 건 알아. 그래도 마을에서 오래 지킨 관습이라시니, 어떻게 다시 말을 꺼낼지 고민이야."
+    elif "아버지" in text or "아빠" in text:
+        reply = "우리 아버지는 마을 경비대장이셨어. 나도 아버지처럼 누군가를 지켜 줄 수 있으면 좋겠어."
     elif any(word in text for word in ("쉬자", "힘들", "피곤")):
         reply = "나도 숨을 좀 고르고 있었어. 여기서 잠깐 이야기할까?" if activity == "personal_rest" else "많이 걷고 온 거야? 급한 얘기가 아니면 천천히 해도 돼."
     elif any(word in text for word in ("훈련", "창술", "연습")):

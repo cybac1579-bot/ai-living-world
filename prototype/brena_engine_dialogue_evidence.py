@@ -13,7 +13,7 @@ def npc_dialogue_evidence(state: dict[str, Any], npc_id: str) -> dict[str, Any]:
         raise KeyError("unknown NPC")
     npc = npcs[npc_id]
     player_place = state.get("player", {}).get("location")
-    together = isinstance(player_place, str) and player_place == npc.get("location")
+    together = isinstance(player_place, str) and bool(player_place.strip()) and player_place == npc.get("location")
     if not together:
         raise PermissionError("NPC dialogue requires actual player colocation")
     memories = npc.get("memories", [])

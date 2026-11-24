@@ -41,7 +41,11 @@ with tempfile.TemporaryDirectory() as directory:
     speak(2, "지난번 말 기억해?")
     assert words in bridge.page_state()["world"]["beats"][0]["text"]
     assert store.load().get("world_minutes", 0) == first["world_minutes"]
-    for revision in range(3, 65):
+    speak(3, "아까 내가 한 말 기억나?")
+    assert words in bridge.page_state()["world"]["beats"][0]["text"]
+    speak(4, "아버지는 어떤 분이셨어?")
+    assert "경비대장" in bridge.page_state()["world"]["beats"][0]["text"]
+    for revision in range(5, 65):
         speak(revision, "안녕")
     assert len(store.load()["npcs"]["BRENA-RANA"]["memories"]) == 60
     saved = store.load()

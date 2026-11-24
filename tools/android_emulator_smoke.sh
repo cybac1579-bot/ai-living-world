@@ -394,4 +394,47 @@ adb shell screencap -p /sdcard/alw-rana-observation.png
 adb pull /sdcard/alw-rana-observation.png "$RUNNER_TEMP/alw-rana-observation.png" > /dev/null
 
 
+# Observation must be a read-only view, never a player action or world tick.
+cp "$RUNNER_TEMP/alw-state-after-travel.json" "$RUNNER_TEMP/alw-state-before-observation.json"
+observe_tap=$(python - <<'PY'
+import os, re
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-rana-observation.xml').getroot()
+matches=[n for n in root.iter() if n.get('text','').strip()=='라나 살펴보기']
+assert len(matches)==1, 'Expected exactly one Rana observation button'
+m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',matches[0].get('bounds',''))
+assert m, 'Missing Rana observation button bounds'
+x1,y1,x2,y2=map(int,m.groups())
+assert x2>x1 and y2>y1
+print((x1+x2)//2,(y1+y2)//2)
+PY
+)
+read -r observe_x observe_y <<< "$observe_tap"
+adb shell input tap "$observe_x" "$observe_y"
+sleep 1
+adb shell uiautomator dump /sdcard/alw-rana-observation-result.xml > /dev/null
+adb shell cat /sdcard/alw-rana-observation-result.xml > "$RUNNER_TEMP/alw-rana-observation-result.xml"
+python - <<'PY'
+import os
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-rana-observation-result.xml').getroot()
+texts=[n.get('text','') for n in root.iter() if n.get('text')]
+assert any('라나 · ' in t for t in texts), 'Rana observation details did not appear: '+repr(texts[:35])
+print('EMULATOR_RANA_OBSERVATION_DETAILS_VISIBLE=PASS')
+PY
+adb shell run-as com.ailivingworld.mobile cat "$save_dir/state.json" > "$RUNNER_TEMP/alw-state-after-observation.json"
+python - <<'PY'
+import json,os
+from pathlib import Path
+p=Path(os.environ['RUNNER_TEMP'])
+before=json.loads((p/'alw-state-before-observation.json').read_text())
+after=json.loads((p/'alw-state-after-observation.json').read_text())
+assert before==after, 'Read-only Rana observation mutated persisted world state'
+print('EMULATOR_RANA_OBSERVATION_READ_ONLY=PASS')
+PY
+adb shell screencap -p /sdcard/alw-rana-observation-result.png
+adb pull /sdcard/alw-rana-observation-result.png "$RUNNER_TEMP/alw-rana-observation-result.png" > /dev/null
+
 echo "EMULATOR_BOOT_SMOKE=PASS"

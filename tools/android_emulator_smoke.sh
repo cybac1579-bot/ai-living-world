@@ -153,6 +153,13 @@ assert not any(any(marker in value for marker in blocking) for value in visible)
 print('EMULATOR_FINAL_SCREEN_DIALOG_CHECK=PASS')
 PY
 python - <<'PY'
+# Capture runner memory pressure near the screenshot decoder, where a prior
+# hosted job exited 137 without a Python traceback.
+echo "EMULATOR_HOST_MEMORY_BEFORE_PNG_CHECK"
+free -m || true
+if [[ -r /sys/fs/cgroup/memory.events ]]; then
+  cat /sys/fs/cgroup/memory.events || true
+fi
 # A pageFinished callback alone does not establish a real screenshot.
 # Validate the captured PNG signature, dimensions and compressed image chunks.
 import os, struct, zlib

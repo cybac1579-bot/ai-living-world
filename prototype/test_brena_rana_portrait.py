@@ -22,7 +22,7 @@ class RanaPortraitTests(unittest.TestCase):
                     "    else delete $('panel').dataset.brenaSpeaker;\n", encoding="utf-8")
                 (parent / "style.css").write_text("", encoding="utf-8")
             approved = root / "approved.webp"
-            approved.write_bytes(b"RIFF" + b"\\x0c\\x00\\x00\\x00" + b"WEBP" + b"VP8 " + b"1234")
+            approved.write_bytes(b"RIFF" + bytes((12, 0, 0, 0)) + b"WEBP" + b"VP8 " + b"1234")
             outputs = stage(root, approved)
             self.assertEqual(len(outputs), 2)
             for output in outputs:
@@ -80,7 +80,7 @@ console.log('RANA_DOM_TRANSITIONS=PASS');
             parent.mkdir(parents=True)
             (parent / "app.js").write_text("app", encoding="utf-8")
             approved = root / "approved.webp"
-            approved.write_bytes(b"RIFF" + b"\\x0c\\x00\\x00\\x00" + b"WEBP" + b"VP8 " + b"1234")
+            approved.write_bytes(b"RIFF" + bytes((12, 0, 0, 0)) + b"WEBP" + b"VP8 " + b"1234")
             target = parent / "assets/characters/rana/neutral.webp"
             target.parent.mkdir(parents=True)
             target.write_bytes(b"already-approved")

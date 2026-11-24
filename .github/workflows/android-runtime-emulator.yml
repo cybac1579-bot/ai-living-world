@@ -36,6 +36,30 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: Validate emulator script shell and embedded Python syntax
+        shell: bash
+        run: |
+          bash -n tools/android_emulator_smoke.sh
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          lines=Path('tools/android_emulator_smoke.sh').read_text(encoding='utf-8').splitlines()
+          i=0
+          count=0
+          while i<len(lines):
+              if lines[i].strip()=="python - <<'PY'":
+                  start=i+1
+                  try:
+                      end=lines.index('PY',start)
+                  except ValueError as exc:
+                      raise AssertionError(f'Unclosed embedded Python block at line {i+1}') from exc
+                  ast.parse('\n'.join(lines[start:end]), filename=f'android_emulator_smoke.sh:{start+1}')
+                  count+=1
+                  i=end
+              i+=1
+          assert count>=1, 'Expected embedded Python smoke checks'
+          print('EMULATOR_EMBEDDED_PYTHON_SYNTAX=PASS',count)
+          PY
       - name: Unpack source and prepare offline-only emulator variant
         shell: bash
         run: |

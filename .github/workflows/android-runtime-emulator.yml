@@ -49,6 +49,13 @@ jobs:
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
           python tools/patch_brena_rana_portrait.py src
+          # An approved portrait must be committed before claiming visual asset validation.
+          if [ -f assets/characters/rana/neutral.webp ]; then
+            python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
+            echo "RANA_PORTRAIT_ASSET=STAGED"
+          else
+            echo "::warning::RANA_PORTRAIT_ASSET=MISSING; only the portrait UI slot is being tested"
+          fi
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view

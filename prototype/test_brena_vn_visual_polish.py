@@ -39,6 +39,20 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 self.assertIn("#brena-travel-actions[hidden]", css)
             self.assertFalse(list(root.rglob("*.png")))
 
+    def test_travel_request_disables_real_buttons_not_summary(self):
+        from patch_brena_vn_ui import patch as patch_ui
+        with tempfile.TemporaryDirectory() as folder:
+            script = Path(folder) / "app.js"
+            script.write_text("    $('place').textContent=app.world.region.name;\n", encoding="utf-8")
+            patch_ui(script)
+            result = script.read_text(encoding="utf-8")
+            self.assertIn(
+                "Array.from(travelActions.querySelectorAll('button')).forEach(b=>{b.disabled=true;});",
+                result)
+            self.assertNotIn(
+                "Array.from(travelActions.children).forEach(b=>{b.disabled=true;});",
+                result)
+
     def test_unknown_renderer_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

@@ -49,17 +49,20 @@ def patch(path: Path) -> None:
       ('인접 장소 · '+destinations.map(d=>d.name).join(' · '));
     let travelActions=document.getElementById('brena-travel-actions');
     if (!travelActions) {
-      travelActions=document.createElement('div');
+      travelActions=document.createElement('details');
       travelActions.id='brena-travel-actions';
-      travelActions.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin:6px 0';
+      travelActions.style.cssText='';
+      const travelSummary=document.createElement('summary');
+      travelSummary.textContent='이동 · 시간';
+      travelActions.appendChild(travelSummary);
       travelPreview.insertAdjacentElement('afterend',travelActions);
     }
-    travelActions.replaceChildren();
+    Array.from(travelActions.querySelectorAll('button')).forEach(button=>button.remove());
     if (validDestinations) destinations.forEach(d=>{
       const btn=document.createElement('button');
       btn.type='button';
       btn.textContent='이동 · '+d.name;
-      btn.style.cssText='font-size:12px;padding:6px 9px';
+      btn.style.cssText='';
       btn.disabled=sending;
       btn.addEventListener('click',()=>{
         if (sending || !app || !app.brena ||
@@ -89,21 +92,21 @@ def patch(path: Path) -> None:
       });
       travelActions.appendChild(btn);
     });
-    travelActions.hidden=!validDestinations || destinations.length===0;
+    travelActions.hidden=!validDestinations && !validClock;
     // The clock advances only after an explicit player click.
     let timeActions=document.getElementById('brena-time-actions');
     if (!timeActions) {
       timeActions=document.createElement('div');
       timeActions.id='brena-time-actions';
-      timeActions.style.cssText='display:flex;gap:6px;margin:6px 0';
-      travelActions.insertAdjacentElement('afterend',timeActions);
+      timeActions.style.cssText='';
+      travelActions.appendChild(timeActions);
     }
     timeActions.replaceChildren();
     if (validClock) {
       const advanceBtn=document.createElement('button');
       advanceBtn.type='button';
       advanceBtn.textContent='시간 10분 진행';
-      advanceBtn.style.cssText='font-size:12px;padding:6px 9px';
+      advanceBtn.style.cssText='';
       advanceBtn.disabled=sending;
       advanceBtn.addEventListener('click',()=>{
         if (sending || !app || !app.world || !app.csrf) return;

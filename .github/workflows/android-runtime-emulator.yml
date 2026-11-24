@@ -17,6 +17,10 @@ on:
       - tools/patch_brena_vn_travel.py
       - tools/patch_brena_vn_time.py
       - tools/patch_brena_vn_ui.py
+      - tools/patch_brena_vn_visual_polish.py
+      - tools/patch_brena_rana_portrait.py
+      - tools/stage_approved_rana_portrait.py
+      - assets/characters/rana/**
       - tools/audit_brena_vn_apk.py
       - prototype/**
       - source/AI_Living_World_Android_v1.3.zip

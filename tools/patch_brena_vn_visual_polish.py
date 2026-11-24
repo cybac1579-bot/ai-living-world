@@ -49,6 +49,49 @@ STYLE = """
   font-variant-numeric: tabular-nums;
   letter-spacing: .03em;
 }
+/* Keep world navigation out of the illustrated scene and dialogue area. */
+#brena-travel-preview { display: none !important; }
+#brena-travel-actions {
+  position: fixed !important;
+  top: calc(env(safe-area-inset-top, 0px) + 76px);
+  right: 12px;
+  z-index: 20;
+  width: min(236px, calc(100vw - 24px));
+  max-height: min(52dvh, 360px);
+  overflow-y: auto;
+  margin: 0 !important;
+  padding: 0;
+  border-radius: 13px;
+  border: 1px solid rgba(211,223,242,.55);
+  background: rgba(18,31,49,.94);
+  color: #f7f8fc;
+  box-shadow: 0 8px 22px rgba(0,0,0,.32);
+}
+#brena-travel-actions[hidden] { display: none !important; }
+#brena-travel-actions > summary {
+  cursor: pointer;
+  padding: 10px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+#brena-travel-actions:not([open]) > button,
+#brena-travel-actions:not([open]) > #brena-time-actions { display: none !important; }
+#brena-travel-actions > button,
+#brena-time-actions > button {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 5px 8px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 13px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+#brena-time-actions { margin: 5px 0 8px; }
+#brena-time-actions[hidden] { display: none !important; }
 #speaker-flag { font-weight: 700; letter-spacing: .02em; }
 @media (max-width: 480px) {
   #panel.dialogue-panel { border-radius: 14px; }

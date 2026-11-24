@@ -16,6 +16,8 @@ SCRIPT = r"""
       ranaPortrait.decoding='async';
       ranaPortrait.hidden=true;
       ranaPortrait.addEventListener('error',()=>{ranaPortrait.hidden=true;});
+      // A stale image load must never reveal Rana over another speaker.
+      // This remains diagnostic-only and never alters world/player state.
       ranaPortrait.addEventListener('load',()=>{
         if (ranaPortrait.naturalWidth>0 &&
             $('panel').dataset.brenaSpeaker==='rana' &&
@@ -26,6 +28,8 @@ SCRIPT = r"""
       $('panel').insertAdjacentElement('beforebegin',ranaPortrait);
     }
     const ranaSpeaking = speakerKey === 'rana' && dialogue === true;
+    // Expose a read-only DOM state for emulator/browser visual regression checks.
+    ranaPortrait.dataset.brenaExpectedVisible = ranaSpeaking ? 'true' : 'false';
     if (!ranaSpeaking) {
       ranaPortrait.hidden=true;
     } else {

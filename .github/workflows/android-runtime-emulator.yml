@@ -266,6 +266,7 @@ jobs:
             ${{ runner.temp }}/alw-travel-menu.png
             ${{ runner.temp }}/alw-rana-colocation.png
             ${{ runner.temp }}/alw-confirm.xml
+            ${{ runner.temp }}/alw-after-travel-tap.png
             ${{ runner.temp }}/alw-travel-options.xml
             ${{ runner.temp }}/alw-ui.xml
             ${{ runner.temp }}/alw-ui-final.xml

@@ -343,7 +343,26 @@ texts=[node.get('text','') for node in root.iter() if node.get('text')]
 assert any('이동할까' in t for t in texts), 'Expected explicit travel confirmation dialog: '+repr(texts[:20])
 print('EMULATOR_TRAVEL_CONFIRMATION_VISIBLE=PASS')
 PY
-adb shell input keyevent 66
+# Native Android confirmation dialogs do not reliably accept KEYCODE_ENTER.
+# Tap the explicit positive button found in UIAutomator instead.
+confirm_tap=$(python - <<'PY'
+import os, re
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-confirm.xml').getroot()
+buttons=[n for n in root.iter() if n.get('class','')=='android.widget.Button']
+print('CONFIRM_DIALOG_BUTTONS='+repr([(n.get('text'),n.get('bounds')) for n in buttons]),file=__import__('sys').stderr)
+positive=[n for n in buttons if n.get('text','').strip() in ('확인','이동','OK','Ok','확인하기','예','Yes')]
+assert len(positive)==1, 'Expected one explicit positive confirmation button'
+m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',positive[0].get('bounds',''))
+assert m, 'Missing confirmation button bounds'
+x1,y1,x2,y2=map(int,m.groups())
+print((x1+x2)//2,(y1+y2)//2)
+PY
+)
+read -r confirm_x confirm_y <<< "$confirm_tap"
+echo "EMULATOR_TRAVEL_CONFIRM_POSITIVE_TARGET=($confirm_x,$confirm_y)"
+adb shell input tap "$confirm_x" "$confirm_y"
 sleep 3
 adb shell run-as com.ailivingworld.mobile cat "$save_dir/state.json" > "$RUNNER_TEMP/alw-state-after-travel.json"
 python - <<'PY'

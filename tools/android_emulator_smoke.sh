@@ -327,8 +327,11 @@ print((x1+x2)//2,(y1+y2)//2)
 PY
 )
 read -r travel_x travel_y <<< "$travel_tap"
+echo "EMULATOR_TRAVEL_TARGET=($travel_x,$travel_y)"
 adb shell input tap "$travel_x" "$travel_y"
 sleep 2
+adb shell screencap -p /sdcard/alw-after-travel-tap.png
+adb pull /sdcard/alw-after-travel-tap.png "$RUNNER_TEMP/alw-after-travel-tap.png" > /dev/null
 adb shell uiautomator dump /sdcard/alw-confirm.xml > /dev/null
 adb shell cat /sdcard/alw-confirm.xml > "$RUNNER_TEMP/alw-confirm.xml"
 python - <<'PY'

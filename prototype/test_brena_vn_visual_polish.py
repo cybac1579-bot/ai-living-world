@@ -89,6 +89,24 @@ class BrenaVisualPatchTests(unittest.TestCase):
             self.assertNotIn("fetch(", observation)
             self.assertNotIn("advance-time", observation)
 
+    def test_rana_observation_visibility_tracks_authoritative_presence(self):
+        from patch_brena_vn_ui import patch as patch_ui
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "app.js"
+            path.write_text("    $('place').textContent=app.world.region.name;\n", encoding="utf-8")
+            patch_ui(path)
+            js = path.read_text(encoding="utf-8")
+            # The same predicate hides both status and observation controls.
+            self.assertIn(
+                "ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label);",
+                js)
+            self.assertIn("observeRana.hidden=ranaBadge.hidden;", js)
+            self.assertIn("if (!observed || observed.player_present !== true || !observed.place_label) return;", js)
+            # No portrait or fabricated speech is attached to the observation control.
+            observation = js.split("// Explicit, offline-safe observation", 1)[1]
+            self.assertNotIn("brena-rana-portrait", observation)
+            self.assertNotIn("renderScene(", observation)
+
     def test_unknown_renderer_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

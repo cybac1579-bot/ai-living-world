@@ -16,6 +16,13 @@ SCRIPT = r"""
       ranaPortrait.decoding='async';
       ranaPortrait.hidden=true;
       ranaPortrait.addEventListener('error',()=>{ranaPortrait.hidden=true;});
+      ranaPortrait.addEventListener('load',()=>{
+        if (ranaPortrait.naturalWidth>0 &&
+            $('panel').dataset.brenaSpeaker==='rana' &&
+            $('panel').classList.contains('dialogue-panel')) {
+          ranaPortrait.hidden=false;
+        }
+      });
       $('panel').insertAdjacentElement('beforebegin',ranaPortrait);
     }
     const ranaSpeaking = speakerKey === 'rana' && dialogue === true;
@@ -30,28 +37,19 @@ SCRIPT = r"""
       }
       if (ranaPortrait.complete && ranaPortrait.naturalWidth>0) {
         ranaPortrait.hidden=false;
-      } else {
-        ranaPortrait.addEventListener('load',()=>{
-          // An asynchronous image must not reappear after the speaker changed.
-          if (ranaPortrait.getAttribute('src')===portraitUrl &&
-              $('panel').dataset.brenaSpeaker==='rana' &&
-              $('panel').classList.contains('dialogue-panel')) {
-            ranaPortrait.hidden=false;
-          }
-        },{once:true});
       }
     }
 """
 STYLE = """
 /* Optional Rana portrait. The source file must be explicitly approved. */
 #brena-rana-portrait {
-  position: absolute;
+  position: fixed;
   z-index: 1;
   width: min(78vw, 440px);
   max-height: 62dvh;
   object-fit: contain;
   object-position: bottom center;
-  bottom: 19%;
+  bottom: 18dvh;
   right: 0;
   pointer-events: none;
   filter: drop-shadow(0 10px 18px rgba(17,15,31,.25));

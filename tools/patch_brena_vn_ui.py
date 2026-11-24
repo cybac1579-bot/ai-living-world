@@ -135,6 +135,25 @@ def patch(path: Path) -> None:
     ranaBadge.hidden=!(rana && rana.player_present === true && rana.place_label);
     // Never reveal a remote NPC's location/activity to an absent player.
     ranaBadge.textContent=ranaBadge.hidden?'':('라나'+(rana.activity_label?' · '+rana.activity_label:''));
+
+    // Explicit, offline-safe observation of a colocated NPC. No dialogue,
+    // relationship change, clock advance, or player decision is synthesized.
+    let observeRana=document.getElementById('brena-observe-rana');
+    if (!observeRana) {
+      observeRana=document.createElement('button');
+      observeRana.id='brena-observe-rana';
+      observeRana.type='button';
+      observeRana.textContent='라나 살펴보기';
+      ranaBadge.insertAdjacentElement('afterend',observeRana);
+      observeRana.addEventListener('click',()=>{
+        const observed=app && app.brena && app.brena.rana;
+        if (!observed || observed.player_present !== true || !observed.place_label) return;
+        const activity=observed.activity_label || '현재 활동 정보 없음';
+        notify('라나 · '+observed.place_label+' · '+activity);
+      });
+    }
+    observeRana.hidden=ranaBadge.hidden;
+
 """
     source=source.replace(anchor,anchor+"\n"+addition,1)
     path.write_text(source,encoding="utf-8")

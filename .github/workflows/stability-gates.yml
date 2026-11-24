@@ -144,6 +144,7 @@ jobs:
           python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view
@@ -210,6 +211,7 @@ jobs:
           python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view

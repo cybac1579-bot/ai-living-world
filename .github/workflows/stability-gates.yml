@@ -257,6 +257,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+      - name: Disable online login in the downloadable debug APK
+        run: python tools/disable_android_debug_login.py
       - name: Compile original arm64 debug APK with Brena modules
         shell: bash
         run: |

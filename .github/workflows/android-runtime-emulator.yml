@@ -25,6 +25,12 @@ on:
       - tools/audit_brena_vn_apk.py
       - prototype/**
       - source/AI_Living_World_Android_v1.3.zip
+  pull_request:
+    branches: [main]
+    paths:
+      - tools/android_emulator_smoke.sh
+      - tools/stage_rana_dialogue.py
+      - .github/workflows/android-runtime-emulator.yml
   workflow_dispatch:
 
 permissions:

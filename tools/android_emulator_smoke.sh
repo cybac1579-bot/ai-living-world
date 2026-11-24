@@ -319,7 +319,7 @@ root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-travel-options.xml').getroot(
 matches=[n for n in root.iter() if n.get('text','').strip()=='이동 · 브레나 촌장 집']
 assert len(matches)==1, 'Expected exactly one chief-house travel button, got '+str(len(matches))
 bounds=matches[0].get('bounds','')
-m=re.fullmatch(r'\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]',bounds)
+m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',bounds)
 assert m, 'Missing travel button bounds: '+bounds
 x1,y1,x2,y2=map(int,m.groups())
 assert x2>x1 and y2>y1, 'Empty travel button bounds'

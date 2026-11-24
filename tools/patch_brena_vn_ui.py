@@ -73,7 +73,7 @@ def patch(path: Path) -> None:
         // No GPT token, model choice, or artificial world-clock advance.
         if (!window.confirm(d.name+'(으)로 이동할까?')) return;
         sending=true;
-        Array.from(travelActions.children).forEach(b=>{b.disabled=true;});
+        Array.from(travelActions.querySelectorAll('button')).forEach(b=>{b.disabled=true;});
         fetch('/api/brena/travel',{
           method:'POST',
           headers:{'Content-Type':'application/json','X-ALW-CSRF':app.csrf},

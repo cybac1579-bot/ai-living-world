@@ -46,6 +46,15 @@ with ZipFile(apk) as z:
     brena_assets=[name for name in names if name.endswith("examples/brena_initial_world.json")]
     assert brena_assets, "Compiled APK does not contain Brena first-run world asset"
     assert any(json.loads(z.read(name).decode("utf-8"))["player"]["location"]=="BRENA-SQUARE" for name in brena_assets), "Compiled Brena asset has wrong start"
+    portrait=root/"android_native/app/src/main/assets/web/assets/characters/rana/neutral.webp"
+    packaged_portraits=[name for name in names if name.endswith("assets/characters/rana/neutral.webp")]
+    if portrait.exists():
+        assert packaged_portraits, "Approved Rana portrait was staged but missing from compiled APK"
+        assert any(z.read(name)==portrait.read_bytes() for name in packaged_portraits), "Packaged Rana portrait differs from approved source"
+        print("RANA_APPROVED_PORTRAIT_IN_APK=PASS")
+    else:
+        assert not packaged_portraits, "Unexpected portrait packaged without approved staged source"
+        print("RANA_APPROVED_PORTRAIT_IN_APK=NOT_YET_AVAILABLE")
     assets=[x for x in names if x.endswith("app.js")]
     print("ANDROID_JS_ASSETS",assets)
     found=False

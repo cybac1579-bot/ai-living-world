@@ -40,16 +40,18 @@ for key, (name, neighbors) in places.items():
 state["player"]["location"] = "BRENA-SQUARE"
 npc_template = deepcopy(next(iter(state["npcs"].values())))
 state["npcs"] = {}
-for key, place in {
-    "rana": "chief_house",
-    "chief": "chief_house",
-    "smith": "smithy",
-    "shopkeeper": "general_store",
-    "innkeeper": "inn",
-    "resident_a": "square",
-    "resident_b": "square",
+for key, (name, place) in {
+    "rana": ("라나", "chief_house"),
+    "chief": ("촌장", "chief_house"),
+    "smith": ("대장장이", "smithy"),
+    "shopkeeper": ("잡화점 주인", "general_store"),
+    "innkeeper": ("여관 주인", "inn"),
+    "resident_a": ("주민 A", "square"),
+    "resident_b": ("주민 B", "square"),
 }.items():
     npc = deepcopy(npc_template)
+    npc["name"] = name
+    npc["knowledge"] = []
     npc["id"] = "BRENA-" + key.upper().replace("_", "-")
     npc["location"] = "BRENA-" + place.upper().replace("_", "-")
     state["npcs"]["BRENA-" + key.upper().replace("_", "-")] = npc

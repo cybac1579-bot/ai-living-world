@@ -16,6 +16,9 @@ def stage(root):
     for directory in (root, android / "python"):
         shutil.copyfile(Path(__file__).resolve().parents[1]/"prototype/brena_rana_dialogue.py",
                         directory/"brena_rana_dialogue.py")
+        live = directory / "live_story.py"
+        replace(live, "*, urlopen=None, timeout=120)", "*, urlopen=None, timeout=120, instructions=SYSTEM_INSTRUCTIONS)")
+        replace(live, "payload = build_request(model, context)", 'payload = build_request(model, context)\n    payload["instructions"] = instructions')
         engine = directory/"world_engine.py"
         anchor = '            state["npcs"][event["npc_id"]].setdefault("memories", []).append({'
         replace(engine, anchor, '''            memories = state["npcs"][event["npc_id"]].setdefault("memories", [])
@@ -36,6 +39,16 @@ def stage(root):
             with self.turn_lock:
                 return talk(self.store, payload["revision"], submission["free_text"])
         if payload["approve"] is not True:''')
+    replace(server, '        if not isinstance(submission, dict) or set(submission) not in', '''        if isinstance(submission, dict) and set(submission) == {"rana_speech"}:
+            from brena_rana_dialogue import talk
+            if not self.turn_lock.acquire(blocking=False):
+                raise WorldError("이미 라나가 대답하고 있어.")
+            try:
+                return talk(self.store, payload["revision"], submission["rana_speech"],
+                            model=payload["model"], token=self.token)
+            finally:
+                self.turn_lock.release()
+        if not isinstance(submission, dict) or set(submission) not in''')
     replace(server, '        asset = rendered.get("image") or {}', '''        for beat in rendered["beats"]:
             if beat.get("speaker", {}).get("id") == "BRENA-RANA":
                 beat["speaker"]["name"] = "라나"
@@ -62,6 +75,23 @@ def stage(root):
         replace(js,"const model=$('model-select').value;", "const model=localTalk ? 'brena-rana' : $('model-select').value;")
         replace(js,"if (!window.confirm('ChatGPT", "if (!localTalk && !window.confirm('ChatGPT")
         replace(js,"model,submission,approve:true", "model,submission,approve:!localTalk")
+        replace(js, "const isFree=next==='free';", "const isFree=next==='free' || next==='rana';")
+        replace(js, "if (isFree && !app.connected && app.brena?.rana?.player_present)", "if (next==='rana' || (isFree && !app.connected && app.brena?.rana?.player_present))")
+        replace(js, "if (!next) return;", """if (!next) return;
+    if (app.connected) {
+      $('free-input').maxLength=next==='rana'?600:1000;
+      $('free-input').placeholder=next==='rana'?'라나에게 하고 싶은 말':'하고 싶은 행동';
+    }""")
+        replace(js, "$('choices').replaceChildren();", """$('choices').replaceChildren();
+    if (app.connected && app.brena?.rana?.player_present) {
+      const talk=document.createElement('button');
+      talk.type='button';
+      talk.textContent='라나에게 말하기';
+      talk.addEventListener('click',()=>setSheet('rana'));
+      $('choices').append(talk);
+    }""")
+        replace(js, 'sendTurn({free_text:text});', "sendTurn(sheet==='rana'?{rana_speech:text}:{free_text:text});")
+        replace(js, "if (!(app.world.choices||[]).length)", "if (!$('choices').childElementCount)")
         replace(web/"index.html","원하는 행동을 직접 입력해","전달할 내용")
 
 

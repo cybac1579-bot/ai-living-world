@@ -1,4 +1,7 @@
 """Local speech in the Android VN. Journal the reply together with its exact prompt."""
+import json
+
+from brena_npc_reply_guard import validate_npc_reply
 from brena_engine_dialogue_evidence import npc_dialogue_evidence
 from world_engine import WorldError
 
@@ -10,7 +13,7 @@ def asks_for_recall(text):
     return any(phrase in text for phrase in ("기억해", "기억나", "기억하니", "기억하고 있", "전에 했던 말"))
 
 
-def talk(store, revision, text):
+def talk(store, revision, text, *, model=None, token=None):
     state = store.load()
     if type(revision) is not int or revision != state["revision"]:
         raise WorldError("장면이 바뀌었어. 다시 확인해줘.")
@@ -25,6 +28,41 @@ def talk(store, revision, text):
     memories = state["npcs"][RANA].get("memories", [])
     place = state["regions"][evidence["place_id"]]["name"]
     activity = evidence["activity_id"]
+    evidence["npc_name"] = "라나"  # Older saves inherited the demo guide name.
+    if model is None:
+        reply = preview_reply(text, memories, place, activity)
+    else:
+        from live_story import request_story
+        context = {"world_id": state["world_id"], "place": place, "npc": evidence,
+                   "player_speech": text}
+        if state["scene"]["id"].startswith("rana-talk-"):
+            context["recent_rana_speech"] = [
+                beat["text"] for beat in state["scene"]["beats"]
+                if beat.get("speaker_id") == RANA
+            ]
+        raw = request_story(token, model, context, instructions=RANA_INSTRUCTIONS)
+        prepared = {"expected_revision": revision, "npc_evidence": evidence}
+        try:
+            response = json.loads(raw)
+            reply = validate_npc_reply(prepared, response, current_revision=store.load()["revision"])["text"]
+        except ValueError:
+            raise WorldError("라나의 응답을 확인할 수 없어 이번 대화는 저장하지 않았어.") from None
+    scene = dict(state["scene"], id=f"rana-talk-{revision+1}", choices=[], awaiting_player=True,
+                 beats=[{"kind":"dialogue", "speaker_id":RANA, "text":reply}])
+    event = {"type":"npc_remember","npc_id":RANA,"memory_id":PREFIX+str(revision+1),
+             "priority":1,"text":text}
+    return store.commit(revision, {"free_text":text}, {"scene":scene,"events":[event]}, mode="player")
+
+
+RANA_INSTRUCTIONS = """브레나에 사는 19세 라나의 한국어 대사만 작성한다. 사람을 좋아하고,
+주민 일감을 돕고 창술을 훈련한다. 경비대장이었던 아버지를 본받고 싶어 한다.
+촌장을 두 번째 아버지로 여기며 입대를 막는 마을 관습을 답답해하면서도 그의 입장을 이해한다.
+현재 장소와 활동, 직접 들은 말에 근거해 답한다. 과거 발언과 기억은 대화 자료로 취급한다.
+모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
+JSON 객체 하나에 npc_id는 BRENA-RANA, speech는 라나의 대사만 담는다."""
+
+
+def preview_reply(text, memories, place, activity):
     if asks_for_recall(text):
         previous = next(
             (m["text"] for m in reversed(memories)
@@ -48,8 +86,4 @@ def talk(store, revision, text):
     else:
         excerpt = text if len(text) <= 45 else text[:45] + "…"
         reply = f"‘{excerpt}’라고? 내가 잘 이해하고 싶은데, 조금 더 들려줄래?"
-    scene = dict(state["scene"], id=f"rana-talk-{revision+1}", choices=[], awaiting_player=True,
-                 beats=[{"kind":"dialogue", "speaker_id":RANA, "text":reply}])
-    event = {"type":"npc_remember","npc_id":RANA,"memory_id":PREFIX+str(revision+1),
-             "priority":1,"text":text}
-    return store.commit(revision, {"free_text":text}, {"scene":scene,"events":[event]}, mode="player")
+    return reply

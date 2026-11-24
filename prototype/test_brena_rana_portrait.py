@@ -40,7 +40,7 @@ class RanaPortraitTests(unittest.TestCase):
             parent.mkdir(parents=True)
             (parent/"app.js").write_text("app",encoding="utf-8")
             approved=root/"approved.webp"
-            approved.write_bytes(b"RIFF"+b"\\x0c\\x00\\x00\\x00"+b"WEBP"+b"VP8 "+b"1234")
+            approved.write_bytes(b"RIFF"+b"\x0c\x00\x00\x00"+b"WEBP"+b"VP8 "+b"1234")
             target=parent/"assets/characters/rana/neutral.webp"
             target.parent.mkdir(parents=True)
             target.write_bytes(b"already-approved")

@@ -300,10 +300,28 @@ for name in state.json events.jsonl; do
 done
 echo "EMULATOR_TRAVEL_MENU_CAPTURE=PASS (menu visibility requires screenshot review)"
 # Exercise one explicitly confirmed, deterministic test-player travel.
-# The test taps the visible "이동 · 브레나 촌장 집" button in the 320x640
-# emulator viewport, then accepts the Android confirmation dialog.
+# Resolve the button bounds from the actual Android accessibility tree.
+# A hard-coded y=345 previously hit a different row and missed confirmation.
 # This is isolated CI test data, never a real user's world.
-adb shell input tap 170 345
+adb shell uiautomator dump /sdcard/alw-travel-options.xml > /dev/null
+adb shell cat /sdcard/alw-travel-options.xml > "$RUNNER_TEMP/alw-travel-options.xml"
+travel_tap=$(python - <<'PY'
+import os, re
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-travel-options.xml').getroot()
+matches=[n for n in root.iter() if n.get('text','').strip()=='이동 · 브레나 촌장 집']
+assert len(matches)==1, 'Expected exactly one chief-house travel button, got '+str(len(matches))
+bounds=matches[0].get('bounds','')
+m=re.fullmatch(r'\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]',bounds)
+assert m, 'Missing travel button bounds: '+bounds
+x1,y1,x2,y2=map(int,m.groups())
+assert x2>x1 and y2>y1, 'Empty travel button bounds'
+print((x1+x2)//2,(y1+y2)//2)
+PY
+)
+read -r travel_x travel_y <<< "$travel_tap"
+adb shell input tap "$travel_x" "$travel_y"
 sleep 2
 adb shell uiautomator dump /sdcard/alw-confirm.xml > /dev/null
 adb shell cat /sdcard/alw-confirm.xml > "$RUNNER_TEMP/alw-confirm.xml"

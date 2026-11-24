@@ -258,14 +258,28 @@ done
 echo "EMULATOR_ACTION_PANEL_READ_ONLY_CAPTURE=PASS (offline preview may have zero choices)"
 # Open the travel menu only; this is not permission to select a destination.
 # Keep the screenshot for a human review of the actual Android control.
-# Close the action panel through its own toggle; Android Back can exit the Activity.
-adb shell input tap 79 582
+# Close the action panel using its visible X at (274,340), then open
+# the travel <details> summary at (120,120). Coordinates are grounded in
+# the archived 320x640 emulator screenshots, not guessed from UI text.
+adb shell input tap 274 340
 sleep 1
-adb shell input tap 160 145
+adb shell input tap 120 120
 sleep 2
 adb shell screencap -p /sdcard/alw-travel-menu.png
 adb pull /sdcard/alw-travel-menu.png "$RUNNER_TEMP/alw-travel-menu.png" > /dev/null
 test -s "$RUNNER_TEMP/alw-travel-menu.png"
+# A screenshot of the Android launcher must never be accepted as game UI.
+travel_foreground=$(adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' || true)
+if [[ "$travel_foreground" != *"com.ailivingworld.mobile"* ]]; then
+  echo "::error::Travel menu interaction left the AI Living World Activity: $travel_foreground"
+  exit 1
+fi
+echo "EMULATOR_TRAVEL_MENU_FOREGROUND=PASS"
+if cmp -s "$RUNNER_TEMP/alw-screen.png" "$RUNNER_TEMP/alw-travel-menu.png"; then
+  echo "::error::Travel menu interaction did not visibly change the screen"
+  exit 1
+fi
+echo "EMULATOR_TRAVEL_MENU_SCREEN_CHANGED=PASS (actual menu content still requires review)"
 adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json"
 cmp "$RUNNER_TEMP/alw-initial-world-after-restart.json" "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json" || {
   echo "::error::Opening the travel menu unexpectedly changed the initial world"

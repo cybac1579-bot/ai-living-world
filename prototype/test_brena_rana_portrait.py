@@ -31,6 +31,7 @@ class RanaPortraitTests(unittest.TestCase):
                 self.assertIn("speakerKey === 'rana' && dialogue === true",js)
                 self.assertIn("ranaPortrait.hidden=true",js)
                 self.assertIn("brenaExpectedVisible",js)
+                self.assertIn("ranaPortrait.dataset.brenaExpectedVisible===\'true\'",js)
                 self.assertIn("ranaSpeaking ? 'true' : 'false'",js)
                 self.assertEqual(js.count("addEventListener('load'"),1)
                 self.assertIn("position: fixed",css)

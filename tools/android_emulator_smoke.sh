@@ -256,4 +256,29 @@ for name in state.json events.jsonl; do
   fi
 done
 echo "EMULATOR_ACTION_PANEL_READ_ONLY_CAPTURE=PASS (offline preview may have zero choices)"
+# Open the travel menu only; this is not permission to select a destination.
+# Keep the screenshot for a human review of the actual Android control.
+adb shell input keyevent 4
+sleep 1
+adb shell input tap 160 145
+sleep 2
+adb shell screencap -p /sdcard/alw-travel-menu.png
+adb pull /sdcard/alw-travel-menu.png "$RUNNER_TEMP/alw-travel-menu.png" > /dev/null
+test -s "$RUNNER_TEMP/alw-travel-menu.png"
+adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json"
+cmp "$RUNNER_TEMP/alw-initial-world-after-restart.json" "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json" || {
+  echo "::error::Opening the travel menu unexpectedly changed the initial world"
+  exit 1
+}
+for name in state.json events.jsonl; do
+  if [[ -f "$RUNNER_TEMP/alw-$name-after" ]]; then
+    adb shell run-as com.ailivingworld.mobile cat "$save_dir/$name" > "$RUNNER_TEMP/alw-$name-after-travel-menu"
+    cmp "$RUNNER_TEMP/alw-$name-after" "$RUNNER_TEMP/alw-$name-after-travel-menu" || {
+      echo "::error::Opening travel menu unexpectedly changed EventStore $name"
+      exit 1
+    }
+  fi
+done
+echo "EMULATOR_TRAVEL_MENU_CAPTURE=PASS (menu visibility requires screenshot review)"
+
 echo "EMULATOR_BOOT_SMOKE=PASS"

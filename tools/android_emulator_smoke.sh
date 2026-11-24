@@ -66,6 +66,14 @@ p=Path(os.environ['RUNNER_TEMP'])/'alw-initial-world.json'
 state=json.loads(p.read_text(encoding='utf-8'))
 assert state['player']['location']=='BRENA-SQUARE', 'Android EventStore did not initialize in Brena'
 assert 'BRENA-RANA' in state['npcs'], 'Android initial EventStore state lacks Rana'
+rana_location=state['npcs']['BRENA-RANA'].get('location')
+player_location=state['player']['location']
+assert isinstance(rana_location,str), 'Rana has no authoritative saved location'
+print('EMULATOR_RANA_COLOCATION='+('PRESENT' if rana_location==player_location else 'ABSENT'))
+print('EMULATOR_RANA_LOCATION='+rana_location)
+print('EMULATOR_PLAYER_LOCATION='+player_location)
+print('EMULATOR_RANA_OBSERVATION_EXPECTED='+('VISIBLE' if rana_location==player_location else 'HIDDEN'))
+
 print('EMULATOR_BRENA_PERSISTED_FIRST_RUN=PASS')
 PY
 # A process restart must reuse the same event journal rather than reseed Brena.

@@ -62,8 +62,9 @@ def patch(root: Path) -> None:
         raise FileNotFoundError("VN app.js missing")
     anchor = "    styleSpeaker(dialogue ? p.speaker : null);"
     addition = """    // Speaker is provided by the validated engine, never guessed from prose.
-    const speakerName = dialogue && p.speaker && typeof p.speaker.name === 'string'
-      ? p.speaker.name.trim() : '';
+    const speakerName = !dialogue ? '' :
+      (typeof p.speaker === 'string' ? p.speaker.trim() :
+       p.speaker && typeof p.speaker.name === 'string' ? p.speaker.name.trim() : '');
     const speakerKey = speakerName === '라나' ? 'rana'
       : (speakerName === '레티시아' ? 'leticia' : '');
     if (speakerKey) $('panel').dataset.brenaSpeaker = speakerKey;

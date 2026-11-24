@@ -33,6 +33,11 @@ for line in texts:
     print(line[:350])
 assert not any('진단 D4' in t for t in texts), 'Debug diagnostics should be hidden in presentation mode after startup'
 assert not any('오류 단계' in t or 'WebView 오류' in t for t in texts), 'The app reports a Python/server/WebView startup error'
+# Android system dialogs can cover the game while the Activity remains foreground.
+# A launcher ANR was previously captured and incorrectly marked as visual success.
+blocking=('isn\'t responding', 'is not responding', 'keeps stopping', 'has stopped', 'System UI isn\'t responding', '응답하지 않습니다', '계속 중단됨')
+assert not any(any(marker in t for marker in blocking) for t in texts), 'Blocking Android system error dialog obscures the game'
+
 print('EMULATOR_PRESENTATION_UI=PASS (diagnostic chrome hidden; visual content still requires screenshot review)')
 PY
 

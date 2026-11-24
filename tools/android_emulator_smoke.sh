@@ -217,6 +217,13 @@ sleep 2
 adb shell screencap -p /sdcard/alw-choices-screen.png
 adb pull /sdcard/alw-choices-screen.png "$RUNNER_TEMP/alw-choices-screen.png" > /dev/null
 test -s "$RUNNER_TEMP/alw-choices-screen.png"
+# A second PNG alone is not evidence that the button opened a different UI.
+# Reject unchanged captures rather than silently reporting a choice-list pass.
+if cmp -s "$RUNNER_TEMP/alw-screen.png" "$RUNNER_TEMP/alw-choices-screen.png"; then
+  echo "::error::Choice-list tap produced an identical screenshot; UI opening is unverified"
+  exit 1
+fi
+echo "EMULATOR_CHOICE_LIST_SCREEN_CHANGED=PASS (content still requires review)"
 adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world-after-choices.json"
 cmp "$RUNNER_TEMP/alw-initial-world-after-restart.json" "$RUNNER_TEMP/alw-initial-world-after-choices.json" || {
   echo "::error::Opening the choice list unexpectedly changed the initial world"

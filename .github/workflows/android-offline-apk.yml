@@ -7,9 +7,9 @@ on:
     paths:
       - source/AI_Living_World_Android_v1.3.zip
       - .github/workflows/android-offline-apk.yml
-      - tools/patch_android_debug_ui.py
-      - tools/patch_android_startup_diagnostics.py
-      - tools/patch_android_presentation_ui.py
+      - prototype/**
+      - tools/**
+      - assets/characters/rana/**
 
 permissions:
   contents: read
@@ -51,6 +51,29 @@ jobs:
       - name: Run all offline engine regression tests
         working-directory: src
         run: python -m unittest discover -s tests -q
+
+      - name: Stage the Brena world and offline dialogue
+        shell: bash
+        run: |
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python tools/stage_brena_android.py src
+          python tools/patch_brena_world_travel.py src/world_engine.py
+          python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
+          PYTHONPATH=src/android_native/app/src/main/python:prototype python -m unittest prototype.test_brena_offline_travel_original_engine prototype.test_brena_atomic_tick_original_engine -v
+          python tools/patch_brena_vn_ui.py src
+          python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
+          python tools/stage_rana_dialogue.py src
+          python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
+
+      - name: Verify offline dialogue and journal replay
+        run: |
+          python tools/check_rana_engine.py src
+          python tools/check_rana_android_http.py src
 
       - name: Disable ChatGPT login and online GPT in this prototype APK
         shell: bash

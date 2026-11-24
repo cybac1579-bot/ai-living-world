@@ -20,6 +20,7 @@ on:
       - tools/patch_brena_vn_visual_polish.py
       - tools/patch_brena_rana_portrait.py
       - tools/stage_approved_rana_portrait.py
+      - tools/stage_rana_dialogue.py
       - assets/characters/rana/**
       - tools/audit_brena_vn_apk.py
       - prototype/**
@@ -86,6 +87,7 @@ jobs:
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
           python tools/patch_brena_rana_portrait.py src
+          python tools/stage_rana_dialogue.py src
           # An approved portrait must be committed before claiming visual asset validation.
           if [ -f assets/characters/rana/neutral.webp ]; then
             python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp

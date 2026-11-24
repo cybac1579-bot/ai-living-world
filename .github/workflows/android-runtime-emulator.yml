@@ -59,6 +59,15 @@ jobs:
               i+=1
           assert count>=1, 'Expected embedded Python smoke checks'
           print('EMULATOR_EMBEDDED_PYTHON_SYNTAX=PASS',count)
+          # Validate the exact Android UIAutomator bounds parser before boot.
+          import re
+          script=Path('tools/android_emulator_smoke.sh').read_text(encoding='utf-8')
+          parser=next(line for line in script.splitlines() if 'm=re.fullmatch(' in line)
+          scope={'re':re,'bounds':'[81,326][299,366]'}
+          exec(parser.strip(),scope)
+          assert scope['m'] is not None, 'UIAutomator bounds regex rejected valid Android coordinates'
+          assert tuple(map(int,scope['m'].groups()))==(81,326,299,366)
+          print('EMULATOR_ACCESSIBILITY_BOUNDS_PARSER=PASS')
           PY
       - name: Unpack source and prepare offline-only emulator variant
         shell: bash

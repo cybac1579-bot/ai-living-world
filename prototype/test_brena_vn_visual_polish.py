@@ -33,6 +33,10 @@ class BrenaVisualPatchTests(unittest.TestCase):
                 self.assertIn("#brena-travel-actions > summary", css)
                 self.assertIn("#brena-travel-actions:not([open]) > button", css)
                 self.assertIn("#brena-time-actions[hidden]", css)
+                self.assertIn("position: fixed !important", css)
+                self.assertIn("max-height: min(52dvh, 360px)", css)
+                self.assertIn("overflow-y: auto", css)
+                self.assertIn("#brena-travel-actions[hidden]", css)
             self.assertFalse(list(root.rglob("*.png")))
 
     def test_unknown_renderer_fails_closed(self):

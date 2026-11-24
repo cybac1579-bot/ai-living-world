@@ -12,7 +12,9 @@ def stage(root: Path, portrait: Path) -> list[Path]:
     if portrait.suffix.lower() != ".webp" or not portrait.is_file():
         raise ValueError("An existing approved WebP portrait is required")
     payload = portrait.read_bytes()
-    if not payload.startswith(b"RIFF") or payload[8:12] != b"WEBP":
+    if len(payload) > 5 * 1024 * 1024:
+        raise ValueError("Approved portrait exceeds the 5 MiB mobile budget")
+    if len(payload) < 20 or not payload.startswith(b"RIFF") or payload[8:12] != b"WEBP":
         raise ValueError("Invalid WebP file")
     parents = [root / "web", root / "android_native/app/src/main/assets/web"]
     existing = [p for p in parents if (p / "app.js").is_file()]

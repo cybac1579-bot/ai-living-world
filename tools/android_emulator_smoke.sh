@@ -299,5 +299,37 @@ for name in state.json events.jsonl; do
   fi
 done
 echo "EMULATOR_TRAVEL_MENU_CAPTURE=PASS (menu visibility requires screenshot review)"
+# Exercise one explicitly confirmed, deterministic test-player travel.
+# The test taps the visible "이동 · 브레나 촌장 집" button in the 320x640
+# emulator viewport, then accepts the Android confirmation dialog.
+# This is isolated CI test data, never a real user's world.
+adb shell input tap 170 345
+sleep 2
+adb shell uiautomator dump /sdcard/alw-confirm.xml > /dev/null
+adb shell cat /sdcard/alw-confirm.xml > "$RUNNER_TEMP/alw-confirm.xml"
+python - <<'PY'
+import os
+from pathlib import Path
+from xml.etree import ElementTree as ET
+root=ET.parse(Path(os.environ['RUNNER_TEMP'])/'alw-confirm.xml').getroot()
+texts=[node.get('text','') for node in root.iter() if node.get('text')]
+assert any('이동할까' in t for t in texts), 'Expected explicit travel confirmation dialog: '+repr(texts[:20])
+print('EMULATOR_TRAVEL_CONFIRMATION_VISIBLE=PASS')
+PY
+adb shell input keyevent 66
+sleep 3
+adb shell run-as com.ailivingworld.mobile cat "$save_dir/state.json" > "$RUNNER_TEMP/alw-state-after-travel.json"
+python - <<'PY'
+import json, os
+from pathlib import Path
+state=json.loads((Path(os.environ['RUNNER_TEMP'])/'alw-state-after-travel.json').read_text(encoding='utf-8'))
+assert state['player']['location']=='BRENA-CHIEF-HOUSE', 'Confirmed travel did not persist the destination'
+assert state['npcs']['BRENA-RANA']['location']=='BRENA-CHIEF-HOUSE', 'Rana location changed unexpectedly'
+print('EMULATOR_CONFIRMED_RANA_COLOCATION=PASS')
+PY
+adb shell screencap -p /sdcard/alw-rana-colocation.png
+adb pull /sdcard/alw-rana-colocation.png "$RUNNER_TEMP/alw-rana-colocation.png" > /dev/null
+echo "EMULATOR_RANA_COLOCATION_CAPTURE=PASS (button visibility requires screenshot review)"
+
 
 echo "EMULATOR_BOOT_SMOKE=PASS"

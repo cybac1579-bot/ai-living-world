@@ -18,6 +18,17 @@ def main():
     java=Path(sys.argv[1])
     source=java.read_text(encoding="utf-8")
     assert 'AI Living World / 진단 D4' in source, "Diagnostic patch must be applied first"
+    # Android WebView does not present JavaScript confirm dialogs without a
+    # WebChromeClient. Explicit player travel/time choices must be confirmable.
+    # The standard client presents the native confirmation UI; it never
+    # automatically accepts a choice or advances the player's world.
+    assert 'setWebChromeClient(' not in source, "Review existing WebChromeClient before replacing it"
+    source=replace_once(
+        source,
+        '        webView.setBackgroundColor(Color.rgb(16, 21, 30));',
+        '        webView.setBackgroundColor(Color.rgb(16, 21, 30));\n'
+        '        webView.setWebChromeClient(new android.webkit.WebChromeClient());'
+    )
     source=replace_once(
         source,
         "    private volatile boolean pageFailed = false;",

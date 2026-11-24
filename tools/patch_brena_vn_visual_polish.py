@@ -1,0 +1,149 @@
+"""Improve VN speaker-card readability without substituting unapproved character art.
+
+The existing engine owns speaker identity; narration stays visually distinct.
+"""
+from pathlib import Path
+import sys
+
+STYLE = """
+/* Brena relationship-first VN: speaker-specific soft dialogue cards. */
+#panel.dialogue-panel {
+  background: linear-gradient(160deg, rgba(246,241,250,.96), rgba(235,228,243,.94));
+  border: 1px solid rgba(171,149,186,.55);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(12,12,26,.27);
+  backdrop-filter: blur(9px);
+  color: #292333;
+}
+#panel.dialogue-panel[data-brena-speaker="leticia"] {
+  background: linear-gradient(160deg, rgba(232,244,255,.97), rgba(213,232,251,.95));
+  border-color: rgba(127,171,218,.65);
+}
+#panel.dialogue-panel[data-brena-speaker="rana"] {
+  background: linear-gradient(160deg, rgba(255,244,238,.97), rgba(252,229,220,.95));
+  border-color: rgba(211,152,132,.60);
+}
+#panel.narration-panel {
+  background: rgba(20,27,39,.88);
+  border: 1px solid rgba(224,231,245,.24);
+  border-radius: 14px;
+  color: #f3f5fa;
+}
+/* The in-world activity indicator is only visible when the player is colocated. */
+#brena-rana-status:not([hidden]) {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 10px;
+  margin-top: 6px;
+  border: 1px solid rgba(223,168,143,.55);
+  border-radius: 999px;
+  background: rgba(70,41,41,.65);
+  color: #fff1e9;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  font-weight: 600;
+}
+#brena-rana-status[hidden] { display: none !important; }
+#brena-observe-rana:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  margin: 5px 0 0 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(223,168,143,.65);
+  background: rgba(48,39,52,.88);
+  color: #fff1e9;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+#brena-observe-rana[hidden] { display: none !important; }
+#brena-world-clock:not([hidden]) {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+}
+/* Keep world navigation out of the illustrated scene and dialogue area. */
+#brena-travel-preview { display: none !important; }
+#brena-travel-actions {
+  position: fixed !important;
+  top: calc(env(safe-area-inset-top, 0px) + 76px);
+  right: 12px;
+  z-index: 20;
+  width: min(236px, calc(100vw - 24px));
+  max-height: min(52dvh, 360px);
+  overflow-y: auto;
+  margin: 0 !important;
+  padding: 0;
+  border-radius: 13px;
+  border: 1px solid rgba(211,223,242,.55);
+  background: rgba(18,31,49,.94);
+  color: #f7f8fc;
+  box-shadow: 0 8px 22px rgba(0,0,0,.32);
+}
+#brena-travel-actions[hidden] { display: none !important; }
+#brena-travel-actions > summary {
+  cursor: pointer;
+  padding: 10px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+#brena-travel-actions:not([open]) > button,
+#brena-travel-actions:not([open]) > #brena-time-actions { display: none !important; }
+#brena-travel-actions > button,
+#brena-time-actions > button {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 5px 8px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 13px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+#brena-time-actions { margin: 5px 0 8px; }
+#brena-time-actions[hidden] { display: none !important; }
+#speaker-flag { font-weight: 700; letter-spacing: .02em; }
+@media (max-width: 480px) {
+  #panel.dialogue-panel { border-radius: 14px; }
+}
+"""
+
+def patch(root: Path) -> None:
+    candidates = [root / "web/app.js", root / "android_native/app/src/main/assets/web/app.js"]
+    scripts = [p for p in candidates if p.is_file()]
+    if not scripts:
+        raise FileNotFoundError("VN app.js missing")
+    anchor = "    styleSpeaker(dialogue ? p.speaker : null);"
+    addition = """    // Speaker is provided by the validated engine, never guessed from prose.
+    const speakerName = !dialogue ? '' :
+      (typeof p.speaker === 'string' ? p.speaker.trim() :
+       p.speaker && typeof p.speaker.name === 'string' ? p.speaker.name.trim() : '');
+    const speakerKey = speakerName === '라나' ? 'rana'
+      : (speakerName === '레티시아' ? 'leticia' : '');
+    if (speakerKey) $('panel').dataset.brenaSpeaker = speakerKey;
+    else delete $('panel').dataset.brenaSpeaker;
+"""
+    for script in scripts:
+        source = script.read_text(encoding="utf-8")
+        if source.count(anchor) != 1:
+            raise AssertionError("unexpected VN speaker renderer")
+        script.write_text(source.replace(anchor, anchor + "\n" + addition, 1), encoding="utf-8")
+    css_candidates = [root / "web/style.css", root / "android_native/app/src/main/assets/web/style.css"]
+    styles = [p for p in css_candidates if p.is_file()]
+    if not styles:
+        raise FileNotFoundError("VN style.css missing")
+    for css in styles:
+        source = css.read_text(encoding="utf-8")
+        if "Brena relationship-first VN" in source:
+            raise AssertionError("duplicate visual patch")
+        css.write_text(source + "\n" + STYLE, encoding="utf-8")
+    print("BRENA_VN_VISUAL_POLISH=PASS")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: patch_brena_vn_visual_polish.py <extracted root>")
+    patch(Path(sys.argv[1]))

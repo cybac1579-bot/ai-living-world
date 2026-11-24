@@ -2,13 +2,28 @@ name: Android runtime emulator smoke
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'development/stability-gates-20261123']
     paths:
       - .github/workflows/android-runtime-emulator.yml
       - tools/android_emulator_smoke.sh
       - tools/patch_android_startup_diagnostics.py
       - tools/patch_android_presentation_ui.py
       - tools/patch_android_debug_ui.py
+      - tools/stage_brena_android.py
+      - tools/patch_brena_android_first_run.py
+      - tools/stage_brena_initial_asset.py
+      - tools/patch_brena_vn_state.py
+      - tools/patch_brena_world_travel.py
+      - tools/patch_brena_vn_travel.py
+      - tools/patch_brena_vn_time.py
+      - tools/patch_brena_vn_ui.py
+      - tools/patch_brena_vn_visual_polish.py
+      - tools/patch_brena_rana_portrait.py
+      - tools/stage_approved_rana_portrait.py
+      - assets/characters/rana/**
+      - tools/audit_brena_vn_apk.py
+      - prototype/**
+      - source/AI_Living_World_Android_v1.3.zip
   workflow_dispatch:
 
 permissions:
@@ -21,11 +36,69 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: Validate emulator script shell and embedded Python syntax
+        shell: bash
+        run: |
+          bash -n tools/android_emulator_smoke.sh
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          lines=Path('tools/android_emulator_smoke.sh').read_text(encoding='utf-8').splitlines()
+          i=0
+          count=0
+          while i<len(lines):
+              if lines[i].strip()=="python - <<'PY'":
+                  start=i+1
+                  try:
+                      end=lines.index('PY',start)
+                  except ValueError as exc:
+                      raise AssertionError(f'Unclosed embedded Python block at line {i+1}') from exc
+                  ast.parse('\n'.join(lines[start:end]), filename=f'android_emulator_smoke.sh:{start+1}')
+                  count+=1
+                  i=end
+              i+=1
+          assert count>=1, 'Expected embedded Python smoke checks'
+          print('EMULATOR_EMBEDDED_PYTHON_SYNTAX=PASS',count)
+          # Validate the exact Android UIAutomator bounds parser before boot.
+          import re
+          script=Path('tools/android_emulator_smoke.sh').read_text(encoding='utf-8')
+          parser=next(line for line in script.splitlines() if 'm=re.fullmatch(' in line)
+          scope={'re':re,'bounds':'[81,326][299,366]'}
+          exec(parser.strip(),scope)
+          assert scope['m'] is not None, 'UIAutomator bounds regex rejected valid Android coordinates'
+          assert tuple(map(int,scope['m'].groups()))==(81,326,299,366)
+          print('EMULATOR_ACCESSIBILITY_BOUNDS_PARSER=PASS')
+          PY
       - name: Unpack source and prepare offline-only emulator variant
         shell: bash
         run: |
           mkdir -p src
           unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python tools/stage_brena_android.py src
+          python tools/patch_brena_world_travel.py src/world_engine.py
+          python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
+          PYTHONPATH=src/android_native/app/src/main/python:prototype python -m unittest prototype.test_brena_offline_travel_original_engine prototype.test_brena_atomic_tick_original_engine -v
+          python tools/patch_brena_vn_ui.py src
+          python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
+          # An approved portrait must be committed before claiming visual asset validation.
+          if [ -f assets/characters/rana/neutral.webp ]; then
+            python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
+            echo "RANA_PORTRAIT_ASSET=STAGED"
+          else
+            echo "::warning::RANA_PORTRAIT_ASSET=MISSING; only the portrait UI slot is being tested"
+          fi
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          assert npc_view(BrenaWorld.new(), 'rana').npc_id == 'rana'
+          print('BRENA_APK_SOURCE_STAGED=PASS')
+          PY
           python - <<'PY'
           from pathlib import Path
           java=Path('src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java')
@@ -52,6 +125,22 @@ jobs:
           python tools/patch_android_debug_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_startup_diagnostics.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
           python tools/patch_android_presentation_ui.py src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java
+      - name: Inspect original player movement action contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          for filename in ('world_engine.py', 'android_native/app/src/main/python/vn_server.py'):
+              tree = ast.parse((Path('src') / filename).read_text(encoding='utf-8'))
+              print('MOVEMENT_CONTRACT_SOURCE', filename)
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      name = node.name.lower()
+                      if any(term in name for term in ('move', 'travel', 'action', 'post', 'commit')):
+                          print('MOVEMENT_CONTRACT_FUNCTION', node.lineno, node.name,
+                                [a.arg for a in node.args.args])
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -68,7 +157,29 @@ jobs:
         with:
           gradle-version: '9.6.0'
       - name: Compile x86_64 debug APK for emulator
-        run: gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          # Avoid repeated immediate requests if Maven Central rate-limits Chaquopy.
+          for attempt in 1 2 3; do
+            echo "Emulator APK build attempt ${attempt}/3"
+            if gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/alw-emulator-gradle.log; then
+              exit 0
+            fi
+            if ! grep -Eiq 'status code 429|HTTP 429|Too Many Requests' /tmp/alw-emulator-gradle.log; then
+              echo "::error::Non-rate-limit Gradle failure; not retrying."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Chaquopy dependency remained rate-limited."
+              exit 1
+            fi
+            if [ "$attempt" -eq 1 ]; then wait_seconds=45; else wait_seconds=120; fi
+            echo "::warning::HTTP 429; waiting ${wait_seconds}s before retry."
+            sleep "$wait_seconds"
+          done
+      - name: Verify x86_64 emulator APK contains Rana UI and Python bridge
+        run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       # The 2026-11-23 run failed before Android boot: emulator FATAL said
       # only 7033 MB free while userdata creation required 7373 MB.
       # Remove unused preinstalled runner SDKs after APK compilation.
@@ -100,7 +211,7 @@ jobs:
           # The prior swiftshader_indirect runs lost emulator-5554 before Android booted.
           # Use software rendering without the deprecated indirect backend and allow
           # extra time on hosted runners. This is an emulator-only smoke test.
-          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader -no-metrics
+          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader -no-metrics -partition-size 2048 -memory 1536
           emulator-boot-timeout: 900
           disable-animations: true
           script: bash tools/android_emulator_smoke.sh
@@ -151,7 +262,18 @@ jobs:
           name: android-emulator-visual-smoke
           path: |
             ${{ runner.temp }}/alw-screen.png
+            ${{ runner.temp }}/alw-choices-screen.png
+            ${{ runner.temp }}/alw-travel-menu.png
+            ${{ runner.temp }}/alw-rana-colocation.png
+            ${{ runner.temp }}/alw-rana-observation.xml
+            ${{ runner.temp }}/alw-rana-observation.png
+            ${{ runner.temp }}/alw-rana-observation-result.xml
+            ${{ runner.temp }}/alw-rana-observation-result.png
+            ${{ runner.temp }}/alw-confirm.xml
+            ${{ runner.temp }}/alw-after-travel-tap.png
+            ${{ runner.temp }}/alw-travel-options.xml
             ${{ runner.temp }}/alw-ui.xml
+            ${{ runner.temp }}/alw-ui-final.xml
             ${{ runner.temp }}/alw-startup-log.txt
             ${{ runner.temp }}/alw-emulator-host-diagnostics.txt
           if-no-files-found: warn

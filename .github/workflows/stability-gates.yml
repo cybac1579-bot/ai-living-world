@@ -1,0 +1,309 @@
+name: AI Living World stability gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: ['development/**']
+    paths:
+      - 'prototype/**'
+      - 'tools/inspect_android_integration.py'
+      - 'tools/inspect_android_startup.py'
+      - 'tools/stage_brena_initial_asset.py'
+      - 'tools/patch_brena_android_first_run.py'
+      - 'tools/inspect_android_engine_save.py'
+      - 'tools/stage_brena_android.py'
+      - 'tools/patch_brena_vn_state.py'
+      - 'tools/patch_brena_vn_ui.py'
+      - 'tools/patch_brena_vn_visual_polish.py'
+      - 'tools/patch_brena_rana_portrait.py'
+      - 'tools/stage_approved_rana_portrait.py'
+      - 'assets/characters/rana/**'
+      - 'tools/patch_brena_world_travel.py'
+      - 'tools/patch_brena_vn_travel.py'
+      - 'tools/patch_brena_vn_time.py'
+      - 'tools/audit_brena_vn_apk.py'
+      - 'tools/inspect_android_clock.py'
+      - 'tools/inspect_android_brena_regions.py'
+      - 'tools/build_brena_initial_world.py'
+      - 'tools/inspect_android_vn_view.py'
+      - 'tools/inspect_android_vn_js.py'
+      - 'tools/patch_android_debug_ui.py'
+      - 'tools/patch_android_startup_diagnostics.py'
+      - 'tools/patch_android_presentation_ui.py'
+      - 'docs/development/PROJECT_SOURCE_OF_TRUTH.md'
+      - '.github/workflows/stability-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stability-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check
+        run: python -m compileall -q prototype
+      - name: World and dialogue regression tests
+        run: python -m unittest discover -s prototype -p 'test_brena_*.py' -v
+      - name: No unsafe generated player action API in prototype
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from brena_simulation import BrenaWorld
+          from brena_dialogue_context import dialogue_context
+          w = BrenaWorld.new()
+          before = w.to_json()
+          dialogue_context(w, "rana")
+          assert w.to_json() == before
+          assert not w.events
+          PY
+        env:
+          PYTHONPATH: prototype
+
+  android-source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Inspect existing Android engine integration points
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/inspect_android_integration.py src | tee android-integration-inventory.json
+          python tools/inspect_android_startup.py src
+          python tools/inspect_android_engine_save.py src
+          python tools/inspect_android_clock.py src
+          python tools/inspect_android_brena_regions.py src
+          python tools/build_brena_initial_world.py src /tmp/brena-initial-world.json
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path('src/android_native/app/src/main/assets/examples/brena_initial_world.json').read_text(encoding='utf-8'))
+          assert a['player']['location']=='BRENA-SQUARE'
+          assert 'BRENA-RANA' in a['npcs']
+          print('BRENA_ANDROID_ASSET_CONTRACT=PASS')
+          PY
+          python tools/inspect_android_vn_view.py src
+          python tools/inspect_android_vn_js.py src
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("android-integration-inventory.json").read_text())
+          paths=data["candidate_files"]
+          assert paths, "No Android source integration points found"
+          print("ANDROID_SOURCE_INVENTORY=PASS", len(paths), "candidate files")
+          PY
+
+  original-engine-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unpack original Android Python engine
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+      - name: Inspect original engine fixture and store API
+        run: |
+          grep -nE '^def |^class |^    def ' src/tests/test_engine.py src/world_engine.py | head -110
+      - name: Inspect canonical player choice schema before Brena travel integration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          demo = json.loads(Path("src/examples/live_demo_world.json").read_text(encoding="utf-8"))
+          print("ORIGINAL_SCENE_CHOICES=", json.dumps(demo["scene"]["choices"], ensure_ascii=False))
+          src = Path("src/world_engine.py").read_text(encoding="utf-8").splitlines()
+          for a, b in ((235, 275), (429, 533)):
+              print(f"ORIGINAL_ENGINE_LINES_{a}_{b}")
+              for n in range(a, min(b, len(src)) + 1):
+                  print(f"{n}: {src[n-1]}")
+          PY
+      - name: Stage Brena Python modules into Android source and smoke-import
+        run: |
+          python tools/stage_brena_android.py src
+          python tools/patch_brena_world_travel.py src/world_engine.py
+          python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_ui.py src
+          python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
+          # An approved portrait must be committed before claiming visual asset validation.
+          if [ -f assets/characters/rana/neutral.webp ]; then
+            python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
+            echo "RANA_PORTRAIT_ASSET=STAGED"
+          else
+            echo "::warning::RANA_PORTRAIT_ASSET=MISSING; only the portrait UI slot is being tested"
+          fi
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          from brena_event_adapter import movement_candidates
+          from world_engine import EventStore
+          world = BrenaWorld.new()
+          assert npc_view(world, 'rana').npc_id == 'rana'
+          assert EventStore is not None
+          print('BRENA_ANDROID_STAGING=PASS')
+          PY
+      - name: Check original world engine syntax
+        run: python -m py_compile src/world_engine.py src/vn_server.py
+      - name: Verify patched VN server responds with Brena clock from legacy save
+        env:
+          PYTHONPATH: src/android_native/app/src/main/python:src:prototype
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'src/android_native/app/src/main/python')
+          import vn_server
+          from brena_presentation_payload import rana_status_payload
+          assert 'rana_status_payload' in vn_server.StoryBridge.page_state.__code__.co_names
+          assert rana_status_payload({'world_minutes': 0})['day'] == 1
+          assert rana_status_payload({})['minute'] == 480
+          print('BRENA_VN_SERVER_CLOCK_CONTRACT=PASS')
+          PY
+      - name: Run original engine persistence and story tests
+        working-directory: src
+        run: python -m unittest discover -s tests -p 'test_engine.py' -v
+      - name: Run Rana VN status through real EventStore restart and journal replay
+        env:
+          PYTHONPATH: src:prototype
+        run: python -m unittest discover -s prototype -p 'test_brena_original_store_rana_status.py' -v
+      - name: Run generated Brena world persistence and restart regression
+        env:
+          PYTHONPATH: src:prototype
+        run: python -m unittest discover -s prototype -p 'test_brena_generated_world_store.py' -v
+      - name: Run Brena event journal integration smoke
+        env:
+          PYTHONPATH: src:prototype
+        run: python -m unittest discover -s prototype -p 'test_brena_original_engine_integration.py' -v
+
+  android-apk-compile:
+    name: Compile Android APK with staged Brena runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unpack original Android app and stage Brena
+        run: |
+          mkdir -p src
+          unzip -q source/AI_Living_World_Android_v1.3.zip -d src
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python tools/stage_brena_android.py src
+          python tools/patch_brena_world_travel.py src/world_engine.py
+          python tools/patch_brena_world_travel.py src/android_native/app/src/main/python/world_engine.py
+          python tools/patch_brena_vn_state.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_travel.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
+          python tools/patch_brena_vn_ui.py src
+          python tools/patch_brena_vn_visual_polish.py src
+          python tools/patch_brena_rana_portrait.py src
+          # An approved portrait must be committed before claiming visual asset validation.
+          if [ -f assets/characters/rana/neutral.webp ]; then
+            python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
+            echo "RANA_PORTRAIT_ASSET=STAGED"
+          else
+            echo "::warning::RANA_PORTRAIT_ASSET=MISSING; only the portrait UI slot is being tested"
+          fi
+          PYTHONPATH=src python - <<'PY'
+          from brena_simulation import BrenaWorld
+          from brena_android_boundary import npc_view
+          from world_engine import EventStore
+          assert npc_view(BrenaWorld.new(), 'rana').npc_id == 'rana'
+          print('BRENA_APK_COMPILE_INPUT=PASS')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - name: Install compile SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Compile original arm64 debug APK with Brena modules
+        shell: bash
+        run: |
+          set -o pipefail
+          # Maven Central may temporarily rate-limit Chaquopy's native runtime (HTTP 429).
+          # Retry only that transient failure; do not hide real Gradle/compile errors.
+          for attempt in 1 2 3; do
+            echo "Android APK build attempt ${attempt}/3"
+            if gradle -p src/android_native :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/brena-gradle-build.log; then
+              exit 0
+            fi
+            if ! grep -Eiq 'status code 429|HTTP 429|Too Many Requests' /tmp/brena-gradle-build.log; then
+              echo "::error::Gradle failed for a reason other than HTTP 429; not retrying."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Chaquopy dependency download remained rate-limited after 3 attempts."
+              exit 1
+            fi
+            if [ "$attempt" -eq 1 ]; then wait_seconds=45; else wait_seconds=120; fi
+            echo "::warning::Maven dependency download returned HTTP 429; waiting ${wait_seconds}s before retry."
+            sleep "$wait_seconds"
+          done
+      - name: Assert built APK exists
+        run: |
+          test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh src/android_native/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify compiled APK includes Rana VN UI and status bridge
+        run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
+      - name: Publish debug APK for Android smoke testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-living-world-brena-debug-apk
+          path: src/android_native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Audit whether staged Brena modules are actually packaged in APK
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk=Path('src/android_native/app/build/outputs/apk/debug/app-debug.apk')
+          with ZipFile(apk) as z:
+              entries=z.namelist()
+              python_assets=[name for name in entries if 'python' in name.lower() or 'chaquopy' in name.lower()]
+              print('PYTHON_APK_ASSETS', python_assets[:80])
+              matched=[name for name in entries if 'brena' in name.lower()]
+              print('BRENA_APK_ENTRIES', matched)
+              # Chaquopy often packs Python source into nested zip assets.
+              nested=[]
+              for name in python_assets:
+                  if not name.endswith(('.zip', '.imy')):
+                      continue
+                  from io import BytesIO
+                  with ZipFile(BytesIO(z.read(name))) as inner:
+                      nested.extend(x for x in inner.namelist() if 'brena' in x.lower())
+              print('BRENA_NESTED_PYTHON_ENTRIES', nested)
+              assert matched or nested, 'APK does not package staged Brena modules'
+          PY
+

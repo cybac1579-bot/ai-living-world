@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from brena_simulation import BrenaWorld
+from brena_simulation import BrenaWorld, PLACES
 
 
 def dialogue_context(world: BrenaWorld, npc_id: str, *, player_place: str | None = None) -> dict[str, Any]:
@@ -19,9 +19,7 @@ def dialogue_context(world: BrenaWorld, npc_id: str, *, player_place: str | None
     if npc_id not in world.residents:
         raise KeyError(f"unknown resident: {npc_id}")
     npc = world.residents[npc_id]
-    if player_place is not None and player_place not in (
-        "square", "general_store", "inn", "smithy", "chief_house", "guard_training_ground"
-    ):
+    if player_place is not None and player_place not in PLACES:
         raise ValueError("unknown player location")
     witnessed = [
         {"day": e["day"], "minute": e["minute"], "detail": e["detail"], "actor": e["actor"], "subject": e["subject"]}

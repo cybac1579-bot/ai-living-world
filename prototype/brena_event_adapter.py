@@ -1,0 +1,53 @@
+"""Conservative Brena-to-original-engine NPC movement event adapter.
+
+Produces candidate events for the original EventStore transition, never commits
+or changes player location. Missing graph links are skipped rather than
+teleporting NPCs. Caller must submit through EventStore validation.
+"""
+from __future__ import annotations
+
+from typing import Any
+from collections import deque
+
+from brena_simulation import BrenaWorld
+
+
+def movement_candidates(world: BrenaWorld, engine_state: dict[str, Any],
+                        *, place_to_region: dict[str, str],
+                        resident_to_npc: dict[str, str]) -> list[dict[str, str]]:
+    regions = engine_state["regions"]
+    npcs = engine_state["npcs"]
+    if len(set(place_to_region.values())) != len(place_to_region):
+        raise ValueError("Brena places must map to distinct original regions")
+    if len(set(resident_to_npc.values())) != len(resident_to_npc):
+        raise ValueError("Brena residents must map to distinct original NPCs")
+    events = []
+    for resident_id, npc_id in resident_to_npc.items():
+        if resident_id not in world.residents or npc_id not in npcs:
+            continue
+        place = world.residents[resident_id].place
+        destination = place_to_region.get(place)
+        if destination not in regions:
+            continue
+        current = npcs[npc_id]["location"]
+        if current not in regions:
+            continue
+        if current == destination:
+            continue
+        # Follow registered edges one step per tick. Never teleport.
+        frontier = deque([(current, None)])
+        visited = {current}
+        next_step = None
+        while frontier:
+            node, first_step = frontier.popleft()
+            if node == destination:
+                next_step = first_step
+                break
+            for neighbor in regions[node].get("neighbors", []):
+                if neighbor in regions and neighbor not in visited:
+                    visited.add(neighbor)
+                    frontier.append((neighbor, first_step or neighbor))
+        if next_step is None:
+            continue
+        events.append({"type": "npc_move", "npc_id": npc_id, "destination": next_step})
+    return events

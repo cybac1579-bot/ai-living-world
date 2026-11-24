@@ -77,7 +77,21 @@ def main():
     s=exact(s, '                    webView.loadUrl(result);',
        '                    pageFailed = false;\n'
        '                    uiError("진단 D4 | 단계 4: 내부 페이지 로딩 중");\n'
-       '                    webView.loadUrl(result);')
+       '                    final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());\n'
+       '                    handler.post(new Runnable() {\n'
+       '                        int attempts = 0;\n'
+       '                        @Override public void run() {\n'
+       '                            if (isFinishing() || isDestroyed()) return;\n'
+       '                            if (webView != null) {\n'
+       '                                webView.loadUrl(result);\n'
+       '                            } else if (attempts++ < 30) {\n'
+       '                                handler.postDelayed(this, 100);\n'
+       '                            } else {\n'
+       '                                Log.e("ALW_BOOT", "WebView unavailable after 3 seconds");\n'
+       '                                uiError("진단 D4 | WebView 초기화 실패");\n'
+       '                            }\n'
+       '                        }\n'
+       '                    });\n')
     s=exact(s,
        '            } catch (Exception ex) {\n'
        '                uiError("실행 실패: Android 런타임/인증/리소스를 확인해야 해. (" + ex.getClass().getSimpleName() + ")");\n'

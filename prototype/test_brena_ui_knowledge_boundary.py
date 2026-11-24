@@ -1,0 +1,97 @@
+"""Guard against accidentally showing remote NPC locations in the VN header.
+
+This is a source contract test; Android screenshot/behavior still needs testing.
+"""
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class RanaKnowledgeBoundaryTests(unittest.TestCase):
+    def test_ui_requires_explicit_player_presence(self):
+        source = (ROOT / "tools/patch_brena_vn_ui.py").read_text(encoding="utf-8")
+        self.assertIn("rana.player_present === true", source)
+        self.assertIn("ranaBadge.hidden", source)
+        self.assertNotIn("'라나 · '+rana.place_label", source)
+
+    def test_vn_clock_uses_only_authoritative_game_time(self):
+        source = (ROOT / "tools/patch_brena_vn_ui.py").read_text(encoding="utf-8")
+        self.assertIn("brena-world-clock", source)
+        self.assertIn("clock.day", source)
+        self.assertIn("clock.minute", source)
+        self.assertNotIn("Date.now(", source)
+        self.assertNotIn("new Date(", source)
+
+    def test_travel_preview_is_read_only_and_uses_server_destinations(self):
+        source = (ROOT / "tools/patch_brena_vn_ui.py").read_text(encoding="utf-8")
+        self.assertIn("brena-travel-preview", source)
+        self.assertIn("app.brena.destinations", source)
+        self.assertIn("Array.isArray(destinations)", source)
+        self.assertIn("destinations.map(d=>d.name)", source)
+        self.assertNotIn("travelPreview.onclick", source)
+        self.assertNotIn("travelPreview.addEventListener", source)
+
+    def test_payload_does_not_assume_player_is_present(self):
+        from brena_presentation_payload import rana_status_payload
+        result = rana_status_payload({"world_minutes": 0})
+        self.assertIs(result["player_present"], False)
+        self.assertNotIn("dialogue", result)
+        for key in ("place_id", "place_label", "activity_id", "activity_label"):
+            self.assertIsNone(result[key], key)
+
+    def test_rana_is_visible_only_at_same_place_without_changing_save(self):
+        from brena_presentation_payload import rana_status_payload
+        original = {"world_minutes": 0, "player": {"location": "BRENA-CHIEF-HOUSE"},
+                    "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}
+        snapshot = repr(original)
+        visible = rana_status_payload(original)
+        self.assertIs(visible["player_present"], True)
+        self.assertEqual(visible["place_id"], "chief_house")
+        self.assertEqual(visible["name"], "라나")
+        self.assertEqual(repr(original), snapshot)
+        other = {"world_minutes": 0, "player": {"location": "BRENA-SQUARE"},
+                 "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}
+        hidden = rana_status_payload(other)
+        self.assertIs(hidden["player_present"], False)
+        self.assertIsNone(hidden["place_id"])
+        self.assertEqual(repr(original), snapshot)
+
+    def test_projected_activity_is_hidden_when_saved_npc_did_not_reach_destination(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from brena_presentation_payload import rana_status_payload
+        state = {"world_minutes": 60, "player": {"location": "BRENA-CHIEF-HOUSE"},
+                 "npcs": {"BRENA-RANA": {"location": "BRENA-CHIEF-HOUSE"}}}
+        projected = SimpleNamespace(day=1, minute=540, npc_place="inn",
+                                    npc_activity="socializing")
+        with patch("brena_presentation_payload.view_from_engine_state", return_value=projected):
+            result = rana_status_payload(state)
+        self.assertTrue(result["player_present"])
+        self.assertEqual(result["place_id"], "chief_house")
+        self.assertIsNone(result["activity_id"])
+        self.assertIsNone(result["activity_label"])
+
+    def test_every_simulation_activity_has_a_korean_presentation_label(self):
+        from brena_simulation import ACTIVITIES
+        from brena_presentation_payload import KNOWN_ACTIVITIES
+        self.assertTrue(set(ACTIVITIES).issubset(KNOWN_ACTIVITIES))
+        for activity in ACTIVITIES:
+            self.assertNotEqual(KNOWN_ACTIVITIES[activity], activity)
+
+    def test_all_rana_simulation_activities_have_localized_labels(self):
+        from brena_simulation import ACTIVITIES
+        from brena_presentation_payload import KNOWN_ACTIVITIES
+        self.assertEqual(set(ACTIVITIES) | {"idle"}, set(KNOWN_ACTIVITIES))
+        self.assertTrue(all(KNOWN_ACTIVITIES[a] for a in ACTIVITIES))
+
+    def test_remote_npc_location_is_redacted_even_with_player_elsewhere(self):
+        from brena_presentation_payload import rana_status_payload
+        result = rana_status_payload({"world_minutes": 0}, player_place="square")
+        self.assertIs(result["player_present"], False)
+        for key in ("place_id", "place_label", "activity_id", "activity_label"):
+            self.assertIsNone(result[key], key)
+
+
+if __name__ == "__main__":
+    unittest.main()

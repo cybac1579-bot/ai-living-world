@@ -136,7 +136,17 @@ adb shell screencap -p /sdcard/alw-screen.png
 adb pull /sdcard/alw-screen.png "$RUNNER_TEMP/alw-screen.png" > /dev/null
 # Check the accessibility tree again at the exact screenshot stage. Android
 # system ANR dialogs can appear after the initial UI dump or after restart.
-adb shell uiautomator dump /sdcard/alw-ui-final.xml > /dev/null
+# A killed UIAutomator dump can exit 137 even after a successful app restart.
+# Retry that transient exit once, still requiring a fresh, parseable XML.
+if adb shell uiautomator dump /sdcard/alw-ui-final.xml > /dev/null; then
+  :
+else
+  status=$?
+  [[ $status -eq 137 ]] || exit "$status"
+  adb shell rm -f /sdcard/alw-ui-final.xml
+  sleep 2
+  adb shell uiautomator dump /sdcard/alw-ui-final.xml > /dev/null
+fi
 adb shell cat /sdcard/alw-ui-final.xml > "$RUNNER_TEMP/alw-ui-final.xml"
 python - <<'PY'
 import os

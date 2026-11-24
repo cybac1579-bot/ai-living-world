@@ -18,6 +18,7 @@ on:
       - 'tools/patch_brena_vn_visual_polish.py'
       - 'tools/patch_brena_rana_portrait.py'
       - 'tools/stage_approved_rana_portrait.py'
+      - tools/stage_rana_dialogue.py
       - 'assets/characters/rana/**'
       - 'tools/patch_brena_world_travel.py'
       - 'tools/patch_brena_vn_travel.py'
@@ -148,6 +149,7 @@ jobs:
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
           python tools/patch_brena_rana_portrait.py src
+          python tools/stage_rana_dialogue.py src
           # An approved portrait must be committed before claiming visual asset validation.
           if [ -f assets/characters/rana/neutral.webp ]; then
             python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
@@ -165,6 +167,14 @@ jobs:
           assert EventStore is not None
           print('BRENA_ANDROID_STAGING=PASS')
           PY
+      - name: Exercise typed Rana conversation and restored memory in mobile Chromium
+        run: |
+          python tools/stage_brena_initial_asset.py src
+          python tools/patch_brena_android_first_run.py src
+          python tools/check_rana_engine.py src
+          python tools/check_rana_android_http.py src
+          python -m pip install playwright
+          CHROMIUM="$(command -v google-chrome)" python tools/test_rana_dialogue_android.py src
       - name: Check original world engine syntax
         run: python -m py_compile src/world_engine.py src/vn_server.py
       - name: Verify patched VN server responds with Brena clock from legacy save
@@ -222,6 +232,7 @@ jobs:
           python tools/patch_brena_vn_ui.py src
           python tools/patch_brena_vn_visual_polish.py src
           python tools/patch_brena_rana_portrait.py src
+          python tools/stage_rana_dialogue.py src
           # An approved portrait must be committed before claiming visual asset validation.
           if [ -f assets/characters/rana/neutral.webp ]; then
             python tools/stage_approved_rana_portrait.py src --approved-rana-portrait assets/characters/rana/neutral.webp
@@ -246,6 +257,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+      - name: Disable online login in the downloadable debug APK
+        run: python tools/disable_android_debug_login.py
       - name: Compile original arm64 debug APK with Brena modules
         shell: bash
         run: |

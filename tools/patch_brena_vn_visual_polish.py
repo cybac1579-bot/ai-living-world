@@ -13,6 +13,7 @@ STYLE = """
   border-radius: 18px;
   box-shadow: 0 12px 32px rgba(12,12,26,.27);
   backdrop-filter: blur(9px);
+  color: #292333;
 }
 #panel.dialogue-panel[data-brena-speaker="leticia"] {
   background: linear-gradient(160deg, rgba(232,244,255,.97), rgba(213,232,251,.95));
@@ -26,6 +27,7 @@ STYLE = """
   background: rgba(20,27,39,.88);
   border: 1px solid rgba(224,231,245,.24);
   border-radius: 14px;
+  color: #f3f5fa;
 }
 #speaker-flag { font-weight: 700; letter-spacing: .02em; }
 @media (max-width: 480px) {

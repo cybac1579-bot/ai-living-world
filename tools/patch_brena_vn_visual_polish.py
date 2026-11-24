@@ -45,6 +45,20 @@ STYLE = """
   font-weight: 600;
 }
 #brena-rana-status[hidden] { display: none !important; }
+#brena-observe-rana:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  margin: 5px 0 0 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(223,168,143,.65);
+  background: rgba(48,39,52,.88);
+  color: #fff1e9;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+#brena-observe-rana[hidden] { display: none !important; }
 #brena-world-clock:not([hidden]) {
   font-variant-numeric: tabular-nums;
   letter-spacing: .03em;

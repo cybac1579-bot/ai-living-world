@@ -209,4 +209,27 @@ assert len(colors)>=8, f'Visually blank screenshot: only {len(colors)} sampled c
 print(f'EMULATOR_SCREENSHOT_PNG=PASS {width}x{height} ({idat} compressed bytes)')
 print(f'EMULATOR_SCREENSHOT_NONBLANK=PASS ({len(colors)} sampled colors; scene content still needs review)')
 PY
+# Open the visible choice-list control without selecting any player action.
+# Pixel positions are derived from the known 320x640 emulator viewport.
+# This diagnostic is deliberately read-only and must not advance world state.
+adb shell input tap 79 582
+sleep 2
+adb shell screencap -p /sdcard/alw-choices-screen.png
+adb pull /sdcard/alw-choices-screen.png "$RUNNER_TEMP/alw-choices-screen.png" > /dev/null
+test -s "$RUNNER_TEMP/alw-choices-screen.png"
+adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world-after-choices.json"
+cmp "$RUNNER_TEMP/alw-initial-world-after-restart.json" "$RUNNER_TEMP/alw-initial-world-after-choices.json" || {
+  echo "::error::Opening the choice list unexpectedly changed the initial world"
+  exit 1
+}
+for name in state.json events.jsonl; do
+  if [[ -f "$RUNNER_TEMP/alw-$name-after" ]]; then
+    adb shell run-as com.ailivingworld.mobile cat "$save_dir/$name" > "$RUNNER_TEMP/alw-$name-after-choices"
+    cmp "$RUNNER_TEMP/alw-$name-after" "$RUNNER_TEMP/alw-$name-after-choices" || {
+      echo "::error::Opening the choice list unexpectedly changed EventStore $name"
+      exit 1
+    }
+  fi
+done
+echo "EMULATOR_CHOICE_LIST_READ_ONLY_CAPTURE=PASS (UI capture, not a dialogue assertion)"
 echo "EMULATOR_BOOT_SMOKE=PASS"

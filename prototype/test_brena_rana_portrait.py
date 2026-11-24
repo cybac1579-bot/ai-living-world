@@ -33,6 +33,21 @@ class RanaPortraitTests(unittest.TestCase):
                 self.assertEqual(js.count("addEventListener('load'"),1)
                 self.assertIn("position: fixed",css)
 
+    def test_existing_portrait_cannot_be_replaced(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            parent=root/"web"
+            parent.mkdir(parents=True)
+            (parent/"app.js").write_text("app",encoding="utf-8")
+            approved=root/"approved.webp"
+            approved.write_bytes(b"RIFF"+b"\\x0c\\x00\\x00\\x00"+b"WEBP"+b"VP8 "+b"1234")
+            target=parent/"assets/characters/rana/neutral.webp"
+            target.parent.mkdir(parents=True)
+            target.write_bytes(b"already-approved")
+            with self.assertRaises(FileExistsError):
+                stage(root,approved)
+            self.assertEqual(target.read_bytes(),b"already-approved")
+
     def test_no_implicit_or_invalid_portrait(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)

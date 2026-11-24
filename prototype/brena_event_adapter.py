@@ -7,6 +7,7 @@ teleporting NPCs. Caller must submit through EventStore validation.
 from __future__ import annotations
 
 from typing import Any
+from collections import deque
 
 from brena_simulation import BrenaWorld
 
@@ -33,8 +34,20 @@ def movement_candidates(world: BrenaWorld, engine_state: dict[str, Any],
             continue
         if current == destination:
             continue
-        # Never skip over intermediate regions or infer an unregistered route.
-        if destination not in regions[current].get("neighbors", []):
+        # Follow registered edges one step per tick. Never teleport.
+        frontier = deque([(current, None)])
+        visited = {current}
+        next_step = None
+        while frontier:
+            node, first_step = frontier.popleft()
+            if node == destination:
+                next_step = first_step
+                break
+            for neighbor in regions[node].get("neighbors", []):
+                if neighbor in regions and neighbor not in visited:
+                    visited.add(neighbor)
+                    frontier.append((neighbor, first_step or neighbor))
+        if next_step is None:
             continue
-        events.append({"type": "npc_move", "npc_id": npc_id, "destination": destination})
+        events.append({"type": "npc_move", "npc_id": npc_id, "destination": next_step})
     return events

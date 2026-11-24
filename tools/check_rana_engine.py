@@ -52,3 +52,43 @@ with tempfile.TemporaryDirectory() as directory:
     store.cache.unlink(missing_ok=True)
     assert EventStore(Path(directory)).load() == saved
     print("PASS Android VN bridge: dialogue, recall, replay, 60-memory limit, revision, colocation")
+
+    # Use the shipped OAuth transport with a synthetic Responses stream.
+    # No account, external inference or subscription quota participates in this test.
+    import io
+    from unittest.mock import patch
+
+    connected = StoryBridge(store, token="test-only", models=[{"slug": "test-model"}])
+    latest = store.load()["revision"]
+    payload = dict(revision=latest, model="test-model", approve=True,
+                   submission={"rana_speech": "오늘은 무슨 일을 해?"})
+    def stream(request, timeout):
+        request_body = json.loads(request.data)
+        evidence = json.loads(request_body["input"][0]["content"])
+        assert evidence["npc"]["npc_name"] == "라나"
+        assert evidence["npc"]["firsthand_memories"]
+        assert evidence["player_speech"] == payload["submission"]["rana_speech"]
+        assert "촌장" in request_body["instructions"]
+        assert "npcs" not in evidence and "player" not in evidence
+        speech = json.dumps({"npc_id": "BRENA-RANA", "speech": "잠시 쉬고 있었어."})
+        events = [{"type":"response.output_text.delta", "delta":speech},
+                  {"type":"response.completed","response":{"status":"completed"}}]
+        return io.BytesIO("".join("data: "+json.dumps(event)+"\n" for event in events).encode())
+
+    with patch("live_story.urllib.request.build_opener") as opener:
+        opener.return_value.open.side_effect = stream
+        for denied in (dict(approve=False), dict(model="unknown"), dict(revision=latest-1)):
+            try:
+                connected.turn(dict(payload, **denied))
+            except WorldError:
+                pass
+            else:
+                raise AssertionError("invalid online turn accepted")
+        opener.assert_not_called()
+        connected.turn(payload)
+        opener.return_value.open.assert_called_once()
+        store.cache.unlink()
+        restored = EventStore(Path(directory)).load()
+        assert restored["scene"]["beats"][0]["text"] == "잠시 쉬고 있었어."
+        assert restored["npcs"]["BRENA-RANA"]["memories"][-1]["text"] == "오늘은 무슨 일을 해?"
+    print("PASS subscription dialogue bridge with simulated transport, consent and journal replay")

@@ -1,9 +1,11 @@
 """Exercise the staged Chaquopy engine and shipped WebView assets in Chromium."""
+import json
 import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from playwright.sync_api import sync_playwright, expect
 
@@ -48,6 +50,26 @@ def run(page, private, assets):
     assert "내일 창술 연습 이야기를 더 듣고 싶어." in second["beats"][0]["text"]
     assert second["world_minutes"] == first["world_minutes"]
     assert second["revision"] == first["revision"] + 1
+
+    # A synthetic catalog + transport exercises the connected WebView flow.
+    mobile_embedded.stop_engine()
+    (private/"auth/credentials.json").write_text("{}")
+    url = mobile_embedded.start_engine(private, assets, offline=False,
+        catalog=lambda **_: ("test-only", [{"slug":"test-model"}]))
+    page.goto(url)
+    page.get_by_role("button", name="선택지 보기").click()
+    page.get_by_role("button", name="라나에게 말하기").click()
+    page.locator("#free-input").fill("오늘은 무슨 일을 해?")
+    with patch("live_story.request_story", return_value=json.dumps({
+        "npc_id":"BRENA-RANA", "speech":"잠시 쉬고 있었어."
+    })) as request:
+        with page.expect_response(lambda r: r.url.endswith("/api/turn")) as response:
+            page.get_by_role("button", name="보내기").click()
+        assert response.value.ok, response.value.text()
+        request.assert_called_once()
+    expect(page.locator("#speaker-flag")).to_have_text("라나")
+    assert response.value.json()["world"]["beats"][0]["text"] == "잠시 쉬고 있었어."
+
 
 
 with tempfile.TemporaryDirectory() as temp, sync_playwright() as pw:

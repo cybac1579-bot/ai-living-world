@@ -17,6 +17,7 @@
 - 브레나 지리·생활·시설: [rana-home-village-v1.4](../world/rana-home-village-v1.4.md)
 - 라나 확정 인물 설정: [rana-v0.8](../characters/rana-v0.8.md)
 - 1차 플레이본 범위와 수용 테스트: [brena-first-playable-v0.1](brena-first-playable-v0.1.md)
+- **2026-11-24 최신 사용자 우선순위:** [라나 관계 몰입·그래픽 중심 1차 플레이본](rana-first-playable-visual-relationship-priority-v0.1.md) — 라나와의 관계 체험 및 시각 연출을 1차 성공 기준으로 우선 검증. 기존 세계 자율성·플레이어 선택권 유지.
 - 장기 관계·결혼 후 플레이: [rana-long-term-relationship-goal-v0.1](rana-long-term-relationship-goal-v0.1.md)
 - 복수 관계 확장 고려: [relationship-architecture-v0.1](relationship-architecture-v0.1.md)
 - Android 소스/빌드 실제 상태: [README](../../README.md), `source/AI_Living_World_Android_v1.3.zip`, `.github/workflows/`

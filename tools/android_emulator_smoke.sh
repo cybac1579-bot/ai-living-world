@@ -280,6 +280,10 @@ if cmp -s "$RUNNER_TEMP/alw-screen.png" "$RUNNER_TEMP/alw-travel-menu.png"; then
   exit 1
 fi
 echo "EMULATOR_TRAVEL_MENU_SCREEN_CHANGED=PASS (actual menu content still requires review)"
+# The screenshot is useful only while the game remains in the foreground.
+# Keep this as a read-only visual smoke; actual travel is tested separately
+# with an explicit confirmed destination and journal verification.
+
 adb shell run-as com.ailivingworld.mobile cat "$save_paths" > "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json"
 cmp "$RUNNER_TEMP/alw-initial-world-after-restart.json" "$RUNNER_TEMP/alw-initial-world-after-travel-menu.json" || {
   echo "::error::Opening the travel menu unexpectedly changed the initial world"

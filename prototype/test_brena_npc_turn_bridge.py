@@ -42,6 +42,14 @@ class NpcTurnBridgeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 prepare_npc_turn(Store(self.state), "BRENA-RANA", invalid)
 
+    def test_missing_locations_cannot_establish_a_meeting(self):
+        for place in ("", "   "):
+            with self.subTest(place=place):
+                self.state["player"]["location"] = place
+                self.state["npcs"]["BRENA-RANA"]["location"] = place
+                with self.assertRaises(PermissionError):
+                    prepare_npc_turn(Store(self.state), "BRENA-RANA", "안녕")
+
     def test_stale_turn_context_reloads_latest_revision(self):
         store = Store(self.state)
         first = prepare_npc_turn(store, "BRENA-RANA", "첫 대화")

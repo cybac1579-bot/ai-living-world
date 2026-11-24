@@ -73,6 +73,20 @@ class BrenaVisualPatchTests(unittest.TestCase):
             self.assertIn('rgba(255,244,238,.97)', css)
             self.assertIn("#panel.narration-panel", css)
 
+    def test_rana_observation_requires_colocation_and_never_submits_actions(self):
+        from patch_brena_vn_ui import patch as patch_ui
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "app.js"
+            path.write_text("    $('place').textContent=app.world.region.name;\n", encoding="utf-8")
+            patch_ui(path)
+            js = path.read_text(encoding="utf-8")
+            self.assertIn("observeRana.hidden=ranaBadge.hidden;", js)
+            self.assertIn("observed.player_present !== true", js)
+            self.assertIn("observed.activity_label || '현재 활동 정보 없음'", js)
+            observation = js.split("// Explicit, offline-safe observation", 1)[1]
+            self.assertNotIn("fetch(", observation)
+            self.assertNotIn("advance-time", observation)
+
     def test_unknown_renderer_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

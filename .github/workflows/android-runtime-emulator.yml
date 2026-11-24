@@ -231,6 +231,8 @@ jobs:
             ${{ runner.temp }}/alw-screen.png
             ${{ runner.temp }}/alw-choices-screen.png
             ${{ runner.temp }}/alw-travel-menu.png
+            ${{ runner.temp }}/alw-rana-colocation.png
+            ${{ runner.temp }}/alw-confirm.xml
             ${{ runner.temp }}/alw-ui.xml
             ${{ runner.temp }}/alw-ui-final.xml
             ${{ runner.temp }}/alw-startup-log.txt

@@ -47,6 +47,7 @@ jobs:
           python tools/patch_brena_vn_time.py src/android_native/app/src/main/python/vn_server.py
           PYTHONPATH=src/android_native/app/src/main/python:prototype python -m unittest prototype.test_brena_offline_travel_original_engine prototype.test_brena_atomic_tick_original_engine -v
           python tools/patch_brena_vn_ui.py src
+          python tools/patch_brena_vn_visual_polish.py src
           PYTHONPATH=src python - <<'PY'
           from brena_simulation import BrenaWorld
           from brena_android_boundary import npc_view

@@ -19,7 +19,8 @@ SCRIPT = r"""
       // A stale image load must never reveal Rana over another speaker.
       // This remains diagnostic-only and never alters world/player state.
       ranaPortrait.addEventListener('load',()=>{
-        if (ranaPortrait.naturalWidth>0 &&
+        if (ranaPortrait.dataset.brenaExpectedVisible==='true' &&
+            ranaPortrait.naturalWidth>0 &&
             $('panel').dataset.brenaSpeaker==='rana' &&
             $('panel').classList.contains('dialogue-panel')) {
           ranaPortrait.hidden=false;

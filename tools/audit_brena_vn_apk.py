@@ -21,6 +21,11 @@ assert '"examples/brena_initial_world.json"' in java, "Java must copy Brena pack
 assert "brena-time-actions" in js and "/api/brena/advance-time" in js, "Missing explicit time control"
 assert "brena-rana-status" in js, "Android VN asset missing Rana label"
 assert "ranaBadge.textContent" in js
+css=(root/"android_native/app/src/main/assets/web/style.css").read_text(encoding="utf-8")
+assert "dataset.brenaSpeaker" in js, "Missing engine-owned dialogue speaker mapping"
+assert '[data-brena-speaker="rana"]' in css, "Missing Rana pastel dialogue card"
+assert '[data-brena-speaker="leticia"]' in css, "Missing Leticia pale-blue dialogue card"
+assert "#panel.narration-panel" in css, "Narration and dialogue must have distinct styles"
 assert "brena-travel-preview" in js, "Android VN asset missing adjacent travel preview"
 assert "app.brena.destinations" in js, "Android VN travel preview must use server data"
 assert "/api/brena/travel" in js, "Travel button must call offline endpoint"
@@ -41,8 +46,16 @@ with ZipFile(apk) as z:
     found_time=False
     found_travel=False
     found_offline_action=False
+    found_speaker_js=False
+    found_visual_css=False
+    for name in (x for x in names if x.endswith("style.css")):
+        style=z.read(name).decode("utf-8")
+        if '[data-brena-speaker="rana"]' in style and '[data-brena-speaker="leticia"]' in style:
+            found_visual_css=True
     for name in assets:
         content=z.read(name)
+        if b"dataset.brenaSpeaker" in content:
+            found_speaker_js=True
         if b"brena-rana-status" in content:
             found=True
         if b"brena-time-actions" in content and b"/api/brena/advance-time" in content:
@@ -55,6 +68,8 @@ with ZipFile(apk) as z:
     assert found_time, "Compiled APK missing explicit Brena time control"
     assert found_travel, "Compiled APK does not contain Brena travel preview"
     assert found_offline_action, "Compiled APK lacks offline travel action"
+    assert found_speaker_js, "Compiled APK lacks NPC speaker-specific dialogue rendering"
+    assert found_visual_css, "Compiled APK lacks pastel NPC dialogue styles"
     packaged_python=[]
     for name in names:
         if not name.endswith((".imy",".zip")):

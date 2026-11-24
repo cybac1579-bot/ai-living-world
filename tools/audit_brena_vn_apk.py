@@ -48,6 +48,10 @@ with ZipFile(apk) as z:
     assert any(json.loads(z.read(name).decode("utf-8"))["player"]["location"]=="BRENA-SQUARE" for name in brena_assets), "Compiled Brena asset has wrong start"
     portrait=root/"android_native/app/src/main/assets/web/assets/characters/rana/neutral.webp"
     packaged_portraits=[name for name in names if name.endswith("assets/characters/rana/neutral.webp")]
+    approved=root.parent/"assets/characters/rana/neutral.webp"
+    if approved.is_file():
+        assert portrait.exists(), "Approved Rana portrait exists in repository but was not staged"
+        assert portrait.read_bytes()==approved.read_bytes(), "Staged Rana portrait differs from repository-approved source"
     if portrait.exists():
         assert packaged_portraits, "Approved Rana portrait was staged but missing from compiled APK"
         assert any(z.read(name)==portrait.read_bytes() for name in packaged_portraits), "Packaged Rana portrait differs from approved source"

@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+capture_screen() {
+  local screenshot="$RUNNER_TEMP/$1" attempt
+  for attempt in 1 2 3; do
+    if adb exec-out screencap -p > "$screenshot.pending" &&
+       python -c 'import sys; from pathlib import Path; data=Path(sys.argv[1]).read_bytes(); sys.exit(0 if data.startswith(bytes.fromhex("89504e470d0a1a0a")) and data.endswith(bytes.fromhex("0000000049454e44ae426082")) else 1)' "$screenshot.pending"; then
+      mv "$screenshot.pending" "$screenshot"
+      return 0
+    fi
+    echo "::warning::Android screenshot $1 capture failed on attempt $attempt"
+    if [[ "$attempt" == 3 ]]; then return 1; fi
+    sleep 2
+  done
+}
+
 APK="src/android_native/app/build/outputs/apk/debug/app-debug.apk"
 test -s "$APK"
 adb install -r "$APK"
@@ -158,8 +172,7 @@ if [[ "$foreground" != *"com.ailivingworld.mobile"* ]]; then
   echo "::error::AI Living World is not the foreground Activity"
   exit 1
 fi
-adb shell screencap -p /sdcard/alw-screen.png
-adb pull /sdcard/alw-screen.png "$RUNNER_TEMP/alw-screen.png" > /dev/null
+capture_screen alw-screen.png
 # Check the accessibility tree again at the exact screenshot stage. Android
 # system ANR dialogs can appear after the initial UI dump or after restart.
 # A killed UIAutomator dump can exit 137 even after a successful app restart.
@@ -273,8 +286,7 @@ PY
 # This diagnostic is deliberately read-only and must not advance world state.
 adb shell input tap 79 582
 sleep 2
-adb shell screencap -p /sdcard/alw-choices-screen.png
-adb pull /sdcard/alw-choices-screen.png "$RUNNER_TEMP/alw-choices-screen.png" > /dev/null
+capture_screen alw-choices-screen.png
 test -s "$RUNNER_TEMP/alw-choices-screen.png"
 # A second PNG alone is not evidence that the action panel opened.
 # Reject unchanged captures rather than silently reporting a choice-list pass.
@@ -307,8 +319,7 @@ adb shell input tap 274 340
 sleep 1
 adb shell input tap 120 120
 sleep 2
-adb shell screencap -p /sdcard/alw-travel-menu.png
-adb pull /sdcard/alw-travel-menu.png "$RUNNER_TEMP/alw-travel-menu.png" > /dev/null
+capture_screen alw-travel-menu.png
 test -s "$RUNNER_TEMP/alw-travel-menu.png"
 # A screenshot of the Android launcher must never be accepted as game UI.
 travel_foreground=$(adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' || true)
@@ -366,8 +377,7 @@ read -r travel_x travel_y <<< "$travel_tap"
 echo "EMULATOR_TRAVEL_TARGET=($travel_x,$travel_y)"
 adb shell input tap "$travel_x" "$travel_y"
 sleep 2
-adb shell screencap -p /sdcard/alw-after-travel-tap.png
-adb pull /sdcard/alw-after-travel-tap.png "$RUNNER_TEMP/alw-after-travel-tap.png" > /dev/null
+capture_screen alw-after-travel-tap.png
 adb shell uiautomator dump /sdcard/alw-confirm.xml > /dev/null
 adb shell cat /sdcard/alw-confirm.xml > "$RUNNER_TEMP/alw-confirm.xml"
 python - <<'PY'
@@ -409,8 +419,7 @@ assert state['player']['location']=='BRENA-CHIEF-HOUSE', 'Confirmed travel did n
 assert state['npcs']['BRENA-RANA']['location']=='BRENA-CHIEF-HOUSE', 'Rana location changed unexpectedly'
 print('EMULATOR_CONFIRMED_RANA_COLOCATION=PASS')
 PY
-adb shell screencap -p /sdcard/alw-rana-colocation.png
-adb pull /sdcard/alw-rana-colocation.png "$RUNNER_TEMP/alw-rana-colocation.png" > /dev/null
+capture_screen alw-rana-colocation.png
 echo "EMULATOR_RANA_COLOCATION_CAPTURE=PASS (button visibility requires screenshot review)"
 # Close the expanded travel menu so the colocated NPC action is not obscured.
 adb shell input tap 120 120
@@ -426,8 +435,7 @@ texts=[node.get('text','') for node in root.iter() if node.get('text')]
 assert '라나 살펴보기' in texts, 'Rana observation action missing after confirmed colocation: '+repr(texts[:35])
 print('EMULATOR_RANA_OBSERVATION_ACTION_VISIBLE=PASS')
 PY
-adb shell screencap -p /sdcard/alw-rana-observation.png
-adb pull /sdcard/alw-rana-observation.png "$RUNNER_TEMP/alw-rana-observation.png" > /dev/null
+capture_screen alw-rana-observation.png
 
 
 # Observation must be a read-only view, never a player action or world tick.
@@ -470,18 +478,6 @@ after=json.loads((p/'alw-state-after-observation.json').read_text())
 assert before==after, 'Read-only Rana observation mutated persisted world state'
 print('EMULATOR_RANA_OBSERVATION_READ_ONLY=PASS')
 PY
-# Capture a fresh final frame over adb. A failed transfer must not invalidate
-# the successful state check or leave an old screenshot marked as current.
-screenshot="$RUNNER_TEMP/alw-rana-observation-result.png"
-for attempt in 1 2 3; do
-  if adb exec-out screencap -p > "$screenshot.pending" &&
-     python -c 'import sys; from pathlib import Path; data=Path(sys.argv[1]).read_bytes(); sys.exit(0 if data.startswith(bytes.fromhex("89504e470d0a1a0a")) and data.endswith(bytes.fromhex("0000000049454e44ae426082")) else 1)' "$screenshot.pending"; then
-    mv "$screenshot.pending" "$screenshot"
-    break
-  fi
-  echo "::warning::Final Android screenshot capture failed on attempt $attempt"
-  if [[ "$attempt" == 3 ]]; then exit 1; fi
-  sleep 2
-done
+capture_screen alw-rana-observation-result.png
 
 echo "EMULATOR_BOOT_SMOKE=PASS"

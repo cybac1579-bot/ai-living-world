@@ -52,7 +52,7 @@ mobile.write_text(s.replace(anchor,probe+anchor))
 activity = app / "src/main/java/com/ailivingworld/mobile/MainActivity.java"
 source = activity.read_text()
 for old, new in [
-    ("        startEngine(true);", "        startEngine(true);\n        login.post(() -> login.performClick());"),
+    ("        startEngine(true);", "        startEngine(true);\n        webView.post(() -> login.performClick());"),
     ("startActivity(new Intent(Intent.ACTION_VIEW,uri)); didOpen.set(true);",
      'android.util.Log.i("ALW_PLAN_CHECK", "ANDROID_LOGIN_BROWSER_HANDOFF_PASS"); didOpen.set(false);')
 ]:

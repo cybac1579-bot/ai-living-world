@@ -15,6 +15,8 @@ identity = target / "plan-identity"
 classes = identity / "src/main/java" / package
 classes.mkdir(parents=True)
 shutil.copy(fixtures / "PlanIdentity.java", classes)
+shutil.copy(fixtures / "PlanAuthHttp.java", classes)
+shutil.copy(fixtures / "android_auth_http.py", main / "python")
 tests = identity / "src/test/java" / package
 tests.mkdir(parents=True, exist_ok=True)
 shutil.copy(fixtures / "PlanIdentityTest.java", tests)
@@ -71,6 +73,12 @@ client.write_text(s[:a] + '''    from java import jclass
 ''' + s[b:])
 replace(client, 'with urllib.request.urlopen(request, timeout=timeout) as response:',
         'from connect_once import _NoRedirect\n        with urllib.request.build_opener(_NoRedirect()).open(request, timeout=timeout) as response:')
+
+replace(client, '    headers = {"Accept": "application/json"}',
+        '    if url.startswith(AUTH_BASE + "/") and bearer is None:\n'
+        '        from android_auth_http import request as auth_request\n'
+        '        return auth_request(url, data, timeout)\n'
+        '    headers = {"Accept": "application/json"}')
 
 # Provide a reference for comparison against ChatGPT's account-side usage entry.
 js = main / "assets/web/app.js"

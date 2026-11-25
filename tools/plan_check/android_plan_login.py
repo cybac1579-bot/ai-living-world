@@ -5,6 +5,7 @@ import time
 from urllib.parse import parse_qs, urlsplit
 
 import siwc_client as client
+from android_auth_http import AuthTransportError
 
 
 def login(private_files, activity, *, timeout=240):
@@ -72,5 +73,7 @@ def login(private_files, activity, *, timeout=240):
         stage = "인증 결과 저장"
         client.write_credentials(path, credentials)
         return "인증 확인 완료. GPT 플레이를 눌러줘."
+    except AuthTransportError as exc:
+        return f"{stage} 실패 · {exc}"
     except Exception:
         return stage + " 단계에서 실패했어."

@@ -118,3 +118,49 @@ replace(java, "    private void doLogin()", """    private final Object resumeLo
         }
     }
     private void doLogin()""")
+
+# Keep account controls reachable without permanently shrinking the illustrated scene.
+replace(java, '        root.addView(bar);', '''        final android.widget.LinearLayout header = new LinearLayout(this);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setBackgroundColor(0xff182921);
+        android.widget.TextView title = new TextView(this);
+        title.setText("AI Living World");
+        title.setTextColor(0xfff4edda);
+        title.setTypeface(android.graphics.Typeface.SERIF);
+        title.setTextSize(17);
+        title.setPadding(Math.round(16*density), 0, 0, 0);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        Button account = new Button(this, null, android.R.attr.borderlessButtonStyle);
+        account.setText("연결 설정");
+        account.setTextColor(0xfff4edda);
+        account.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
+            .setTitle("연결 설정")
+            .setItems(new String[]{"Continue with ChatGPT", "GPT 플레이", "화면 시험"},
+                (dialog, item) -> { if (item == 0) login.performClick();
+                    else if (item == 1) online.performClick(); else offline.performClick(); })
+            .setNegativeButton("닫기", null).show());
+        header.addView(account);
+        root.addView(header, new LinearLayout.LayoutParams(-1, Math.round(48*density)));''')
+replace(java, 'root.addView(status,new LinearLayout.LayoutParams(-1,statusHeight));',
+        'status.setVisibility(android.view.View.GONE);\n        root.addView(status,new LinearLayout.LayoutParams(-1,-2));')
+replace(java, 'status.setText("구독 연결 확인용 · 모델 요청마다 승인");',
+        'status.setVisibility(android.view.View.GONE);')
+replace(java, 'runOnUiThread(() -> status.setText(message));',
+        'runOnUiThread(() -> {status.setText(message); status.setVisibility(android.view.View.VISIBLE);});')
+web = main / "assets/web"
+with (web/"style.css").open("a") as css:
+    css.write("\n" + (fixtures/"scene.css").read_text())
+html = web/"index.html"
+replace(html, '<span class="model-tag" id="model-tag">연결 확인 중</span>', '')
+replace(html, '<span id="rev">rev —</span>', '')
+replace(html, '</select></div>', '</select><span id="model-tag">연결 확인 중</span><span id="rev">rev —</span></div>')
+replace(js, "const travelSummary=document.createElement('summary');",
+        """for (const id of ['choices-toggle', 'free-toggle']) {
+        $(id).addEventListener('click', () => { travelActions.open = false; });
+      }
+      const travelSummary=document.createElement('summary');""")
+for error in ('이동 실패', '시간 진행 실패'):
+    anchor = f"if (!res.ok) throw new Error(data.error||'{error}');"
+    replace(js, anchor, anchor + "\n          travelActions.open=false;")
+replace(main/"python/android_plan_login.py", "인증 확인 완료. GPT 플레이를 눌러줘.",
+        "인증 확인 완료. 연결 설정에서 GPT 플레이를 눌러줘.")

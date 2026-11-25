@@ -75,6 +75,8 @@ jobs:
           python tools/check_rana_engine.py src
           python tools/check_rana_android_http.py src
 
+      - name: Stage isolated subscription verification app
+        run: python tools/stage_rana_plan_check.py src plan-check
       - name: Disable ChatGPT login and online GPT in this prototype APK
         run: python tools/disable_android_debug_login.py
 
@@ -146,6 +148,15 @@ jobs:
           fi
           echo "OFFLINE_LOOPBACK_PERMISSION_CHECK=PASS"
 
+      - name: Verify identity checks and build non-debuggable subscription candidate
+        run: |
+          gradle -p plan-check :plan-identity:test :app:assembleRelease --no-daemon
+          apk=plan-check/app/build/outputs/apk/release/app-release.apk
+          aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          "$aapt" dump badging "$apk" > plan-check-badging.txt
+          grep -F "package: name='com.ailivingworld.mobile.plancheck'" plan-check-badging.txt
+          if grep -q 'application-debuggable' plan-check-badging.txt; then exit 1; fi
+          cp "$apk" rana-plan-check.apk
       - name: Publish offline-only APK to private prerelease
         shell: bash
         env:
@@ -162,3 +173,4 @@ jobs:
             gh release create "$tag" "$apk#AI-Living-World-OFFLINE-debug.apk" --repo "$GITHUB_REPOSITORY" --title "Offline Android debug APK - $tag" --notes "TEST BUILD ONLY. ChatGPT login and online model calls are disabled. Not tested on a real Android device. Offline demo UI / local save only." --prerelease
           fi
           echo "PRIVATE_RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"
+          gh release upload "$tag" rana-plan-check.apk --clobber --repo "$GITHUB_REPOSITORY"

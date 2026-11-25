@@ -257,6 +257,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+      - name: Stage isolated subscription verification app
+        run: python tools/stage_rana_plan_check.py src plan-check
       - name: Disable online login in the downloadable debug APK
         run: python tools/disable_android_debug_login.py
       - name: Compile original arm64 debug APK with Brena modules
@@ -282,6 +284,15 @@ jobs:
             echo "::warning::Maven dependency download returned HTTP 429; waiting ${wait_seconds}s before retry."
             sleep "$wait_seconds"
           done
+      - name: Verify identity checks and build non-debuggable subscription candidate
+        run: |
+          gradle -p plan-check :plan-identity:test :app:assembleRelease --no-daemon
+          apk=plan-check/app/build/outputs/apk/release/app-release.apk
+          aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          "$aapt" dump badging "$apk" > plan-check-badging.txt
+          grep -F "package: name='com.ailivingworld.mobile.plancheck'" plan-check-badging.txt
+          if grep -q 'application-debuggable' plan-check-badging.txt; then exit 1; fi
+          cp "$apk" rana-plan-check.apk
       - name: Assert built APK exists
         run: |
           test -s src/android_native/app/build/outputs/apk/debug/app-debug.apk

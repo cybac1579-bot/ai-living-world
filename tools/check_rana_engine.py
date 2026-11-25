@@ -159,3 +159,23 @@ with tempfile.TemporaryDirectory() as directory:
     assert history["stance_exchange"] == history["recent"][-1]
     assert history["stance_exchange"]["player"] == "미안해"
     print("PASS Rana remembers the cause of distance across restart and accepts an apology cautiously")
+
+    for _ in range(4):
+        speak(store.load()["revision"], "안녕")
+    assert "천천히" in bridge.page_state()["world"]["beats"][0]["text"]
+    store.cache.unlink(missing_ok=True)
+    store = EventStore(Path(directory))
+    connected = StoryBridge(store, token="test-only", models=[{"slug":"test-model"}])
+    with patch("live_story.request_story", return_value=json.dumps({
+        "npc_id":"BRENA-RANA", "speech":"응, 오늘은 얘기할 수 있어.", "stance":"편안함"
+    })) as model:
+        connected.turn(dict(revision=store.load()["revision"], model="test-model", approve=True,
+                            submission={"rana_speech":"잠깐 이야기할까?"}))
+        sent = model.call_args.args[2]["shared_history"]
+        assert sent["distance_exchange"]["player"] == insult
+        assert "진지해" in sent["distance_exchange"]["rana"]
+        assert sent["stance_exchange"]["player"] == "미안해"
+        assert sent["stance_exchange"] not in sent["recent"] and sent["distance_exchange"] not in sent["recent"]
+    history = shared_history(store, store.load()["revision"], "")
+    assert history["stance"] == "편안함" and history["distance_exchange"] is None
+    print("PASS later model turn retains both conflict and apology, then retires the old tone")

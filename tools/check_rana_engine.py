@@ -92,3 +92,20 @@ with tempfile.TemporaryDirectory() as directory:
         assert restored["scene"]["beats"][0]["text"] == "잠시 쉬고 있었어."
         assert restored["npcs"]["BRENA-RANA"]["memories"][-1]["text"] == "오늘은 무슨 일을 해?"
     print("PASS subscription dialogue bridge with simulated transport, consent and journal replay")
+
+    from brena_rana_dialogue import shared_history
+    history = shared_history(store, restored["revision"], "창술 연습 기억나?")
+    assert history["earlier"]["player"] == words
+    assert "창" in history["earlier"]["rana"]
+    assert history["recent"][-1]["rana"] == "잠시 쉬고 있었어."
+    # Personal boundaries may affect Rana without inventing the player's feelings.
+    rev = restored["revision"]
+    speak(rev, "말하기 싫으면 안 해도 돼")
+    store.cache.unlink(missing_ok=True)
+    saved = store.load()
+    assert saved["npcs"]["BRENA-RANA"]["mood"] == "안도"
+    assert shared_history(store, rev + 1, "")["stance"] == "편안함"
+    player = saved["player"].copy()
+    store.commit(rev+1, None, {"events":[{"type":"world_advance","minutes":60}]}, mode="brena_world_tick")
+    assert store.load()["player"] == player
+    print("PASS archived exchange after eviction, own speech, mood, stance and independent time")

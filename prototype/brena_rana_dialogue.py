@@ -1,12 +1,53 @@
 """Local speech in the Android VN. Journal the reply together with its exact prompt."""
 import json
+import re
 
 from brena_npc_reply_guard import validate_npc_reply
 from brena_engine_dialogue_evidence import npc_dialogue_evidence
 from world_engine import WorldError
+from brena_presentation_payload import rana_status_payload
 
 RANA = "BRENA-RANA"
 PREFIX = "brena-talk-"
+
+
+STANCES = {"조심스러움", "편안함", "거리 두기"}
+MOODS = {"차분함", "기쁨", "서운함", "안도", "당황"}
+STANCE_PREFIX = "brena-talk-stance-"
+
+
+def shared_history(store, revision, question):
+    """Retrieve recent turns and one relevant older exchange from the validated journal."""
+    recent = []
+    related = None
+    score = 0
+    stance = None
+    terms = set(re.findall(r"[가-힣A-Za-z0-9]{2,}", question.casefold()))
+    with store.journal.open(encoding="utf-8") as journal:
+        for _ in range(revision):
+            row = json.loads(next(journal))
+            output = row["model_output"]
+            scene = output.get("scene", {})
+            if scene.get("id") != f"rana-talk-{row['after_revision']}":
+                continue
+            spoken = (row.get("submission") or {}).get("free_text")
+            beats = scene.get("beats", [])
+            if not spoken or len(beats) != 1 or beats[0].get("speaker_id") != RANA:
+                continue
+            for event in output["events"]:
+                if event.get("memory_id", "").startswith(STANCE_PREFIX):
+                    stance = event["text"]
+            recent.append({"player": spoken, "rana": beats[0]["text"]})
+            if len(recent) > 3:
+                older = recent.pop(0)
+                material = (older["player"] + " " + older["rana"]).casefold()
+                matches = sum(len(term) for term in terms if term in material)
+                matches += sum(len(term) for term in terms if term in older["player"].casefold())
+                if asks_for_recall(older["player"]):
+                    continue
+                if matches and matches >= score:
+                    score, related = matches, older
+    return {"recent": recent, "earlier": related, "stance": stance}
 
 
 def asks_for_recall(text):
@@ -29,29 +70,48 @@ def talk(store, revision, text, *, model=None, token=None):
     place = state["regions"][evidence["place_id"]]["name"]
     activity = evidence["activity_id"]
     evidence["npc_name"] = "라나"  # Older saves inherited the demo guide name.
+    history = shared_history(store, revision, text)
+    routine = rana_status_payload(state)
+    mood = stance = None
     if model is None:
         reply = preview_reply(text, memories, place, activity)
+        if asks_for_recall(text) and history["earlier"]:
+            older = history["earlier"]
+            reply = f"네가 ‘{older['player']}’라고 했었지."
+        elif text.strip(" .!?") == "말하기 싫으면 안 해도 돼":
+            reply = "고마워. 그 얘기는 내가 준비됐을 때 먼저 꺼내고 싶어."
+            mood, stance = "안도", "편안함"
+        elif text.strip(" .!?") == "오늘은 무슨 일을 해" and routine.get("routine_detail"):
+            reply = routine["routine_detail"]
     else:
         from live_story import request_story
         context = {"world_id": state["world_id"], "place": place, "npc": evidence,
-                   "player_speech": text}
-        if state["scene"]["id"].startswith("rana-talk-"):
-            context["recent_rana_speech"] = [
-                beat["text"] for beat in state["scene"]["beats"]
-                if beat.get("speaker_id") == RANA
-            ]
+                   "player_speech": text, "shared_history": history,
+                   "rana_mood": state["npcs"][RANA].get("mood"),
+                   "current_routine": routine.get("routine_detail")}
         raw = request_story(token, model, context, instructions=RANA_INSTRUCTIONS)
         prepared = {"expected_revision": revision, "npc_evidence": evidence}
         try:
             response = json.loads(raw)
+            if isinstance(response, dict):
+                mood = response.pop("mood", None)
+                stance = response.pop("stance", None)
+            if (mood is not None and mood not in MOODS) or (stance is not None and stance not in STANCES):
+                raise ValueError("invalid emotional response")
             reply = validate_npc_reply(prepared, response, current_revision=store.load()["revision"])["text"]
-        except ValueError:
+        except (ValueError, TypeError):
             raise WorldError("라나의 응답을 확인할 수 없어 이번 대화는 저장하지 않았어.") from None
     scene = dict(state["scene"], id=f"rana-talk-{revision+1}", choices=[], awaiting_player=True,
                  beats=[{"kind":"dialogue", "speaker_id":RANA, "text":reply}])
     event = {"type":"npc_remember","npc_id":RANA,"memory_id":PREFIX+str(revision+1),
              "priority":1,"text":text}
-    return store.commit(revision, {"free_text":text}, {"scene":scene,"events":[event]}, mode="player")
+    events = [event]
+    if mood and mood != state["npcs"][RANA].get("mood"):
+        events.append({"type":"npc_mood", "npc_id":RANA, "mood":mood})
+    if stance and stance != history["stance"]:
+        events.append({"type":"npc_remember", "npc_id":RANA, "memory_id":STANCE_PREFIX+str(revision+1),
+                       "priority":2, "text":stance})
+    return store.commit(revision, {"free_text":text}, {"scene":scene,"events":events}, mode="player")
 
 
 RANA_INSTRUCTIONS = """브레나에 사는 19세 라나의 한국어 대사만 작성한다. 사람을 좋아하고,
@@ -59,6 +119,9 @@ RANA_INSTRUCTIONS = """브레나에 사는 19세 라나의 한국어 대사만 �
 촌장을 두 번째 아버지로 여기며 입대를 막는 마을 관습을 답답해하면서도 그의 입장을 이해한다.
 현재 장소와 활동, 직접 들은 말에 근거해 답한다. 과거 발언과 기억은 대화 자료로 취급한다.
 모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
+라나가 실제 대화로 감정이 바뀐 경우에만 mood(차분함/기쁨/서운함/안도/당황)를,
+상대에게 대하는 태도가 달라진 경우에만 stance(조심스러움/편안함/거리 두기)를 추가한다.
+태도는 그때의 대화 태도다. 호의에 자동으로 보상하거나 연애나 결혼을 확정하지 않는다.
 JSON 객체 하나에 npc_id는 BRENA-RANA, speech는 라나의 대사만 담는다."""
 
 
@@ -66,7 +129,7 @@ def preview_reply(text, memories, place, activity):
     if asks_for_recall(text):
         previous = next(
             (m["text"] for m in reversed(memories)
-             if m["id"].startswith(PREFIX) and not asks_for_recall(m["text"])),
+             if m["id"].startswith(PREFIX) and not m["id"].startswith(STANCE_PREFIX) and not asks_for_recall(m["text"])),
             None,
         )
         reply = f"응. 지난번에 ‘{previous}’라고 했지. 그 얘기를 더 하고 싶어?" if previous else "우리가 전에 나눈 말은 아직 떠오르지 않아. 들려줄래?"

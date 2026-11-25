@@ -149,7 +149,7 @@ def patch(path: Path) -> None:
         const observed=app && app.brena && app.brena.rana;
         if (!observed || observed.player_present !== true || !observed.place_label) return;
         const activity=observed.activity_label || '현재 활동 정보 없음';
-        notify('라나 · '+observed.place_label+' · '+activity);
+        notify('라나 · '+observed.place_label+' · '+(observed.observation || activity));
       });
     }
     observeRana.hidden=ranaBadge.hidden;

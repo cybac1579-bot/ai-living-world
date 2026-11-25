@@ -15,6 +15,32 @@ tail -n 120 "$RUNNER_TEMP/alw-startup-log.txt" || true
 
 adb shell uiautomator dump /sdcard/alw-ui.xml > /dev/null
 adb shell cat /sdcard/alw-ui.xml > "$RUNNER_TEMP/alw-ui.xml"
+# On some cold boots the Android launcher is still starting when the game is ready.
+# Only acknowledge the launcher's own Wait button, then inspect a new tree.
+launcher_wait=$(python - "$RUNNER_TEMP/alw-ui.xml" <<'PYCHECK'
+import re
+import sys
+from xml.etree import ElementTree as ET
+nodes = list(ET.parse(sys.argv[1]).iter("node"))
+if any(n.get("package") == "android" and n.get("text") == "Pixel Launcher isn't responding" for n in nodes):
+    for node in nodes:
+        if node.get("package") == "android" and node.get("text") == "Wait":
+            coords = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.get("bounds", ""))
+            if coords:
+                x1, y1, x2, y2 = map(int, coords.groups())
+                print((x1+x2)//2, (y1+y2)//2)
+            break
+PYCHECK
+)
+if [[ -n "$launcher_wait" ]]; then
+  echo "::warning::Pixel Launcher stalled during cold boot. Waiting once and checking a fresh game screen."
+  read -r tap_x tap_y <<< "$launcher_wait"
+  adb shell input tap "$tap_x" "$tap_y"
+  sleep 4
+  adb shell uiautomator dump /sdcard/alw-ui.xml > /dev/null
+  adb shell cat /sdcard/alw-ui.xml > "$RUNNER_TEMP/alw-ui.xml"
+  grep -Fq 'package="com.ailivingworld.mobile"' "$RUNNER_TEMP/alw-ui.xml"
+fi
 echo "== Visible native diagnostic text =="
 python - <<'PY'
 from xml.etree import ElementTree as ET

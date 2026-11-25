@@ -15,7 +15,7 @@
 #brena-travel-actions > summary { min-height:40px; padding:10px; }
 #brena-travel-actions[open] { order:10; width:100%; max-height:min(48dvh,330px); }
 #brena-travel-actions[open] button { min-height:44px; }
-#brena-rana-portrait { width:100%; height:100%; max-height:none; inset:0;
+#brena-rana-portrait { z-index:0; width:100%; height:100%; max-height:none; inset:0;
   object-fit:cover; object-position:42% 44%; filter:none; mask-image:none; -webkit-mask-image:none; }
 #brena-travel-actions:not([open]) { order:3; }
 .story { bottom:calc(65px + env(safe-area-inset-bottom)); left:12px; right:12px; }
@@ -33,3 +33,29 @@
 .action-sheet { bottom:calc(60px + env(safe-area-inset-bottom)); z-index:8; }
 .sheet-bottom { flex-wrap:wrap; }
 .sheet-bottom #model-tag, .sheet-bottom #rev { font:11px system-ui,sans-serif; max-width:100%; white-space:normal; color:#d6e1dd; }
+
+/* The scrim follows the height of Rana's current subtitle page. */
+.story:has(#panel[data-brena-speaker="rana"].dialogue-panel) {
+  left:0; right:0; padding:0 22px; bottom:calc(54px + env(safe-area-inset-bottom));
+}
+.story:has(#panel[data-brena-speaker="rana"].dialogue-panel)::before {
+  content:""; position:absolute; pointer-events:none; z-index:1;
+  inset:-40px 0 calc(-54px - env(safe-area-inset-bottom));
+  background:linear-gradient(to bottom,transparent,#2e202bea 44px,#221820f7 100%);
+}
+.story:has(#panel[data-brena-speaker="rana"]) #speaker-flag {
+  color:#ffcebf !important; background:transparent; margin:0; padding:0 0 4px;
+  border-radius:0; border-bottom:1px solid #dba39288;
+}
+#panel.dialogue-panel[data-brena-speaker="rana"] {
+  background:transparent; color:#fff5ef; border:0; border-radius:0;
+  box-shadow:none; backdrop-filter:none; min-height:0; max-height:32dvh;
+  padding:7px 12px 6px 0; line-height:1.65;
+}
+#panel[data-brena-speaker="rana"] .next-mark { font-size:16px; right:0; bottom:2px; color:#f4cbbc; }
+.story:has(#panel[data-brena-speaker="rana"]) .page-status {position:relative;z-index:2;color:#decacb;padding-left:0;}
+#app:has(#panel[data-brena-speaker="rana"]) .footer {
+  left:22px; right:22px; bottom:env(safe-area-inset-bottom); min-height:50px;
+  background:transparent; backdrop-filter:none; border:0; border-top:1px solid #dec6c13d; border-radius:0;
+}
+#app:has(#panel[data-brena-speaker="rana"]) .footer-action {color:#f4dace;}

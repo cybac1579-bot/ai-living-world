@@ -15,6 +15,11 @@ def login(private_files, activity, *, timeout=240):
         host = client.read_or_create_host_id(folder)
         path = folder / "credentials.json"
         previous = client.read_credentials(path) if path.exists() else None
+        stage = "앱에서 로그인 전 서버 연결 확인"
+        oidc = client._json_request(client.AUTH_BASE + "/.well-known/openid-configuration")
+        uri = oidc.get("jwks_uri", "")
+        if not uri.startswith(client.AUTH_BASE + "/"):
+            return "인증 서버의 서명 키 주소를 확인하지 못했어."
         stage = "휴대폰 콜백 열기"
         result = {}
         class Handler(BaseHTTPRequestHandler):
@@ -36,8 +41,10 @@ def login(private_files, activity, *, timeout=240):
                 except client.SIWCError:
                     result["error"] = "권한 승인" if params.get("error") else "브라우저 인증 응답 확인"
                 self.send_response(400 if "error" in result else 200)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
                 self.end_headers()
-                self.wfile.write(b"Return to AI Living World.")
+                self.wfile.write("게임 앱으로 돌아가면 로그인이 계속돼.".encode("utf-8"))
 
             def log_message(self, *_):
                 pass
@@ -57,13 +64,11 @@ def login(private_files, activity, *, timeout=240):
                 receiver.handle_request()
         if "error" in result:
             return result["error"] + " 단계에서 로그인을 마치지 못했어."
+        stage = "게임 화면 복귀 확인"
+        if not activity.awaitGameResume():
+            return "게임 화면으로 돌아오는 시간이 지났어. 로그인을 다시 시작해줘."
         stage = "인증 코드 교환"
         tokens = client.exchange_authorization_code(attempt, result["code"], result["client_id"])
-        stage = "인증 서버 정보 확인"
-        oidc = client._json_request(client.AUTH_BASE + "/.well-known/openid-configuration")
-        uri = oidc.get("jwks_uri", "")
-        if not uri.startswith(client.AUTH_BASE + "/"):
-            return "인증 서버의 서명 키 주소를 확인하지 못했어."
         stage = "서명 키 조회"
         keys = client._json_request(uri)
         stage = "계정 서명과 구독 권한 확인"

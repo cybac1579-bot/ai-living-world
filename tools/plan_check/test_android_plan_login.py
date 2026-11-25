@@ -13,6 +13,9 @@ class Browser:
     def __init__(self, consent):
         self.consent = consent
 
+    def awaitGameResume(self):
+        return True
+
     def openSystemBrowser(self, url):
         params = parse_qs(urlsplit(url).query)
         redirect = urlsplit(params["redirect_uri"][0])
@@ -29,10 +32,16 @@ class Browser:
 
 
 class AndroidLoginTests(unittest.TestCase):
+    def setUp(self):
+        transport = patch.object(subject.client, "_json_request", return_value={"jwks_uri":subject.client.AUTH_BASE+"/keys"})
+        self.discovery = transport.start()
+        self.addCleanup(transport.stop)
+
     def run_flow(self, browser):
         with tempfile.TemporaryDirectory() as root:
             message = subject.login(root, browser, timeout=3)
-            browser.thread.join(4)
+            if hasattr(browser, "thread"):
+                browser.thread.join(4)
             return message, (Path(root)/"auth/credentials.json").exists()
 
     def test_accept_after_incidental_requests(self):
@@ -42,6 +51,23 @@ class AndroidLoginTests(unittest.TestCase):
             msg, saved = self.run_flow(Browser({"code":"fixture", "client_id":"oaiapp_fixture"}))
         self.assertTrue(saved)
         self.assertIn("인증 확인 완료", msg)
+
+    def test_no_browser_when_preflight_dns_fails(self):
+        self.discovery.side_effect = subject.AuthTransportError("서버 주소 조회 실패")
+        browser = Browser({})
+        with patch.object(browser, "openSystemBrowser") as open_browser:
+            msg, saved = self.run_flow(browser)
+            open_browser.assert_not_called()
+        self.assertFalse(saved)
+        self.assertIn("로그인 전 서버 연결 확인 실패", msg)
+
+    def test_no_exchange_when_game_does_not_resume(self):
+        browser = Browser({"code":"fixture", "client_id":"oaiapp_fixture"})
+        with patch.object(browser, "awaitGameResume", return_value=False), patch.object(subject.client, "exchange_authorization_code") as exchange:
+            msg, saved = self.run_flow(browser)
+            exchange.assert_not_called()
+        self.assertFalse(saved)
+        self.assertIn("돌아오는 시간", msg)
 
     def test_decline(self):
         msg, saved = self.run_flow(Browser({"error":"access_denied"}))

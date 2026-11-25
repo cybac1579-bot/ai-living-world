@@ -91,3 +91,30 @@ replace(js, "      renderScene(result);\n      $('free-input').value='';", """  
 shutil.copy(fixtures / "android_plan_login.py", main / "python")
 replace(java, 'getModule("mobile_embedded");\n                module.callAttr("login",getFilesDir().getCanonicalPath(),this);\n                uiError("인증 확인 완료. GPT 플레이를 눌러줘.");',
         'getModule("android_plan_login");\n                uiError(module.callAttr("login",getFilesDir().getCanonicalPath(),this).toString());')
+
+replace(java, "    private void doLogin()", """    private final Object resumeLock = new Object();
+    private boolean resumed;
+
+    @Override protected void onResume() {
+        super.onResume();
+        synchronized (resumeLock) {
+            resumed = true;
+            resumeLock.notifyAll();
+        }
+    }
+    @Override protected void onPause() {
+        synchronized (resumeLock) { resumed = false; }
+        super.onPause();
+    }
+    public boolean awaitGameResume() throws InterruptedException {
+        long deadline = android.os.SystemClock.elapsedRealtime() + 90000;
+        synchronized (resumeLock) {
+            while (!resumed) {
+                long remaining = deadline - android.os.SystemClock.elapsedRealtime();
+                if (remaining <= 0) return false;
+                resumeLock.wait(remaining);
+            }
+            return true;
+        }
+    }
+    private void doLogin()""")

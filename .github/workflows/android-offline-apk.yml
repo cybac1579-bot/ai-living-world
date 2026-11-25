@@ -150,7 +150,7 @@ jobs:
 
       - name: Verify identity checks and build non-debuggable subscription candidate
         run: |
-          gradle -p plan-check :plan-identity:test :app:assembleRelease --no-daemon
+          bash tools/plan_check/build.sh :plan-identity:test :app:assembleRelease
           apk=plan-check/app/build/outputs/apk/release/app-release.apk
           aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
           "$aapt" dump badging "$apk" > plan-check-badging.txt

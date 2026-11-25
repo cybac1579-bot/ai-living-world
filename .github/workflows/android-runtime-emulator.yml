@@ -193,7 +193,7 @@ jobs:
             sleep "$wait_seconds"
           done
       - name: Compile isolated x86 subscription candidate with synthetic identity fixture
-        run: gradle -p plan-check :app:assembleRelease --no-daemon
+        run: bash tools/plan_check/build.sh :app:assembleRelease
       - name: Verify x86_64 emulator APK contains Rana UI and Python bridge
         run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       # The 2026-11-23 run failed before Android boot: emulator FATAL said

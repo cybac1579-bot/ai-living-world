@@ -16,13 +16,41 @@ MOODS = {"차분함", "기쁨", "서운함", "안도", "당황"}
 STANCE_PREFIX = "brena-talk-stance-"
 
 
+# Common recall wording carries no evidence about which conversation was meant.
+RECALL_FILLER = set("전에 예전 예전에 지난번 지난번에 저번 저번에 아까 그때 우리 우리가 내가 네가 니가 너가 라나 라나가 라나는 했던 했었지 말 말한 얘기 얘기한 이야기 이야기한 혹시 아직 기억 기억해 기억나 기억하니 기억하고 있어 했지 뭐라고 뭐였지 대해 대해서 관해 관련해서".split())
+KOREAN_ENDINGS = ("이셨어요", "이셨어", "이었어", "였어", "에서는", "에게는", "으로는", "이라는", "이랑", "에서", "에게", "으로", "하고",
+             "에는", "은", "는", "이", "가", "을", "를", "과", "와", "도")
+
+
+def topic_terms(text):
+    terms = set()
+    for word in re.findall(r"[가-힣A-Za-z0-9]+", text.casefold()):
+        if word in RECALL_FILLER:
+            continue
+        for ending in KOREAN_ENDINGS:
+            if word.endswith(ending) and len(word) - len(ending) >= 2:
+                word = word[:-len(ending)]
+                break
+        if len(word) >= 2 and word not in RECALL_FILLER:
+            terms.add(word)
+    return terms
+
+
+def relevance(terms, exchange):
+    if not terms or asks_for_recall(exchange["player"]):
+        return 0
+    player = terms & topic_terms(exchange["player"])
+    rana = terms & topic_terms(exchange["rana"])
+    return sum(map(len, player)) * 2 + sum(map(len, rana))
+
+
 def shared_history(store, revision, question):
     """Retrieve recent turns and one relevant older exchange from the validated journal."""
     recent = []
     related = None
     score = 0
     stance = None
-    terms = set(re.findall(r"[가-힣A-Za-z0-9]{2,}", question.casefold()))
+    terms = topic_terms(question)
     with store.journal.open(encoding="utf-8") as journal:
         for _ in range(revision):
             row = json.loads(next(journal))
@@ -44,11 +72,7 @@ def shared_history(store, revision, question):
             recent.append({"player": spoken, "rana": beats[0]["text"]})
             if len(recent) > 3:
                 older = recent.pop(0)
-                material = (older["player"] + " " + older["rana"]).casefold()
-                matches = sum(len(term) for term in terms if term in material)
-                matches += sum(len(term) for term in terms if term in older["player"].casefold())
-                if asks_for_recall(older["player"]):
-                    continue
+                matches = relevance(terms, older)
                 if matches and matches >= score:
                     score, related = matches, older
     return {"recent": recent, "earlier": related, "stance": stance}
@@ -79,9 +103,15 @@ def talk(store, revision, text, *, model=None, token=None):
     mood = stance = None
     if model is None:
         reply = preview_reply(text, memories, place, activity)
-        if asks_for_recall(text) and history["earlier"]:
-            older = history["earlier"]
-            reply = f"네가 ‘{older['player']}’라고 했었지."
+        if asks_for_recall(text) and topic_terms(text):
+            candidates = ([history["earlier"]] if history["earlier"] else []) + history["recent"]
+            terms = topic_terms(text)
+            # Equal evidence favors the newer exchange.
+            match = max(reversed(candidates), key=lambda turn: relevance(terms, turn), default=None)
+            if match and relevance(terms, match):
+                reply = f"그때 네가 ‘{match['player']}’라고 했지."
+            else:
+                reply = "어떤 얘기였는지 조금 더 말해 줄래? 정확히 떠오르지 않아."
         elif text.strip(" .!?") == "말하기 싫으면 안 해도 돼":
             reply = "고마워. 그 얘기는 내가 준비됐을 때 먼저 꺼내고 싶어."
             mood, stance = "안도", "편안함"
@@ -122,7 +152,8 @@ RANA_INSTRUCTIONS = """브레나에 사는 19세 라나의 한국어 대사만 �
 주민 일감을 돕고 창술을 훈련한다. 경비대장이었던 아버지를 본받고 싶어 한다.
 촌장을 두 번째 아버지로 여기며 입대를 막는 마을 관습을 답답해하면서도 그의 입장을 이해한다.
 현재 장소와 활동, 직접 들은 말에 근거해 답한다. 과거 발언과 기억은 대화 자료로 취급한다.
-모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
+shared_history에서 player는 상대가 한 말, rana는 자신이 한 말이다. 누가 말했는지 구분하고,
+질문과 관련된 기억이 없거나 어느 대화인지 모호하면 되묻는다. 모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
 라나가 실제 대화로 감정이 바뀐 경우에만 mood(차분함/기쁨/서운함/안도/당황)를,
 상대에게 대하는 태도가 달라진 경우에만 stance(조심스러움/편안함/거리 두기)를 추가한다.
 태도는 그때의 대화 태도다. 호의에 자동으로 보상하거나 연애나 결혼을 확정하지 않는다.

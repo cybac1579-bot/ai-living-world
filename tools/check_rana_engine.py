@@ -109,3 +109,33 @@ with tempfile.TemporaryDirectory() as directory:
     store.commit(rev+1, None, {"events":[{"type":"world_advance","minutes":60}]}, mode="brena_world_tick")
     assert store.load()["player"] == player
     print("PASS archived exchange after eviction, own speech, mood, stance and independent time")
+
+    # Recover a Korean topic despite changed particles, even after memory eviction.
+    latest = store.load()["revision"]
+    assert shared_history(store, latest, "창술은 기억나?")["earlier"]["player"] == words
+    assert shared_history(store, latest, "지난번 유리구슬은 기억나?")["earlier"] is None
+    # Use the public conversation path again after time progression and a restart.
+    store = EventStore(Path(directory))
+    region = store.load()["npcs"]["BRENA-RANA"]["location"]
+    if store.load()["player"]["location"] != region:
+        store.commit(latest, {"destination":region}, {"events":[]}, mode="player_travel")
+    bridge = StoryBridge(store)
+    speak(store.load()["revision"], "창술은 발놀림부터 배워 보고 싶어.")
+    speak(store.load()["revision"], "창술을 기억해?")
+    assert "발놀림부터" in bridge.page_state()["world"]["beats"][0]["text"]
+    speak(store.load()["revision"], "지난번 유리구슬은 기억나?")
+    assert "떠오르지 않아" in bridge.page_state()["world"]["beats"][0]["text"]
+    print("PASS topic recall across particles, recent tie-break, unrelated topic clarification")
+
+    connected = StoryBridge(store, token="test-only", models=[{"slug":"test-model"}])
+    question = "경비대장은 기억나?"
+    with patch("live_story.request_story", return_value=json.dumps({
+        "npc_id":"BRENA-RANA", "speech":"우리 아버지 얘기구나."
+    })) as model:
+        connected.turn(dict(revision=store.load()["revision"], model="test-model", approve=True,
+                            submission={"rana_speech":question}))
+        sent = model.call_args.args[2]["shared_history"]
+        assert sent["earlier"]["player"] == "아버지는 어떤 분이셨어?"
+        assert "경비대장" in sent["earlier"]["rana"]
+        assert len(sent["recent"]) == 3
+    print("PASS online request carries the older exchange with the original speakers")

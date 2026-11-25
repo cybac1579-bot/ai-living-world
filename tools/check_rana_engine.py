@@ -139,3 +139,23 @@ with tempfile.TemporaryDirectory() as directory:
         assert "경비대장" in sent["earlier"]["rana"]
         assert len(sent["recent"]) == 3
     print("PASS online request carries the older exchange with the original speakers")
+
+    insult = "경비대원이 되겠다는 네 꿈이 우스워"
+    speak(store.load()["revision"], insult)
+    for greeting in range(4):
+        speak(store.load()["revision"], "안녕")
+    assert "내 일을" in bridge.page_state()["world"]["beats"][0]["text"]
+    store.cache.unlink(missing_ok=True)
+    store = EventStore(Path(directory))
+    bridge = StoryBridge(store)
+    history = shared_history(store, store.load()["revision"], "")
+    assert history["stance"] == "거리 두기"
+    assert history["stance_exchange"]["player"] == insult
+    assert history["stance_exchange"] not in history["recent"]
+    assert "진지해" in history["stance_exchange"]["rana"]
+    speak(store.load()["revision"], "미안해")
+    history = shared_history(store, store.load()["revision"], "")
+    assert history["stance"] == "조심스러움"
+    assert history["stance_exchange"] == history["recent"][-1]
+    assert history["stance_exchange"]["player"] == "미안해"
+    print("PASS Rana remembers the cause of distance across restart and accepts an apology cautiously")

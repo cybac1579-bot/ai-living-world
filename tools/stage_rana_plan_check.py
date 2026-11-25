@@ -11,10 +11,25 @@ app = target / "app"
 main = app / "src/main"
 fixtures = Path(__file__).parent / "plan_check"
 package = Path("com/ailivingworld/mobile")
-shutil.copy(fixtures / "PlanIdentity.java", main / "java" / package)
-tests = app / "src/test/java" / package
+identity = target / "plan-identity"
+classes = identity / "src/main/java" / package
+classes.mkdir(parents=True)
+shutil.copy(fixtures / "PlanIdentity.java", classes)
+tests = identity / "src/test/java" / package
 tests.mkdir(parents=True, exist_ok=True)
 shutil.copy(fixtures / "PlanIdentityTest.java", tests)
+with (target / "settings.gradle").open("a") as settings:
+    settings.write("\ninclude ':plan-identity'\n")
+(identity / "build.gradle").write_text("""plugins { id 'java-library' }
+dependencies {
+    implementation 'com.nimbusds:nimbus-jose-jwt:10.10'
+    testImplementation 'junit:junit:4.13.2'
+}
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+""")
 gradle = app / "build.gradle"
 replace(gradle, "applicationId 'com.ailivingworld.mobile'", "applicationId 'com.ailivingworld.mobile.plancheck'")
 replace(gradle, "    compileOptions {", """    buildTypes {
@@ -28,8 +43,7 @@ start = gradle.read_text().index('        pip {')
 end = gradle.read_text().index('        }',start) + len('        }')
 gradle.write_text(gradle.read_text()[:start] + gradle.read_text()[end:] + """
 dependencies {
-    implementation 'com.nimbusds:nimbus-jose-jwt:10.10'
-    testImplementation 'junit:junit:4.13.2'
+    implementation project(':plan-identity')
 }
 """)
 replace(main/"AndroidManifest.xml", 'android:label="AI Living World"', 'android:label="라나 구독 연결 확인"')

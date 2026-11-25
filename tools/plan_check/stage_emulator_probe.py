@@ -46,3 +46,16 @@ s = mobile.read_text()
 anchor = "    private, sample, web = _paths(private_files,resources)"
 assert s.count(anchor) == 1
 mobile.write_text(s.replace(anchor,probe+anchor))
+
+# Drive the production button and Python-to-Java bridge on first launch. Stop
+# just before dispatching the real authorization URL to an external browser.
+activity = app / "src/main/java/com/ailivingworld/mobile/MainActivity.java"
+source = activity.read_text()
+for old, new in [
+    ("        startEngine(true);", "        startEngine(true);\n        login.post(() -> login.performClick());"),
+    ("startActivity(new Intent(Intent.ACTION_VIEW,uri)); didOpen.set(true);",
+     'android.util.Log.i("ALW_PLAN_CHECK", "ANDROID_LOGIN_BROWSER_HANDOFF_PASS"); didOpen.set(false);')
+]:
+    assert source.count(old) == 1, old
+    source = source.replace(old, new)
+activity.write_text(source)

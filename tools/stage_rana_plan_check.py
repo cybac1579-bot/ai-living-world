@@ -79,3 +79,7 @@ replace(js, "      renderScene(result);\n      $('free-input').value='';", """  
         $('model-tag').textContent = model+' · 대화 '+result.world.revision+' · '+new Date().toLocaleTimeString('ko-KR');
       }
       $('free-input').value='';""")
+
+shutil.copy(fixtures / "android_plan_login.py", main / "python")
+replace(java, 'getModule("mobile_embedded");\n                module.callAttr("login",getFilesDir().getCanonicalPath(),this);\n                uiError("인증 확인 완료. GPT 플레이를 눌러줘.");',
+        'getModule("android_plan_login");\n                uiError(module.callAttr("login",getFilesDir().getCanonicalPath(),this).toString());')

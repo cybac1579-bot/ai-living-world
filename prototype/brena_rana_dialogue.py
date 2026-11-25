@@ -50,6 +50,7 @@ def shared_history(store, revision, question):
     related = None
     score = 0
     stance = None
+    stance_exchange = None
     terms = topic_terms(question)
     with store.journal.open(encoding="utf-8") as journal:
         for _ in range(revision):
@@ -66,16 +67,20 @@ def shared_history(store, revision, question):
                        event.get("memory_id") == PREFIX + str(row["after_revision"]) and
                        event.get("text") == spoken for event in output["events"]):
                 continue
+            exchange = {"player": spoken, "rana": beats[0]["text"]}
             for event in output["events"]:
-                if event.get("memory_id", "").startswith(STANCE_PREFIX):
+                if (event.get("type") == "npc_remember" and event.get("npc_id") == RANA
+                        and event.get("memory_id") == STANCE_PREFIX + str(row["after_revision"])
+                        and event.get("text") in STANCES):
                     stance = event["text"]
-            recent.append({"player": spoken, "rana": beats[0]["text"]})
+                    stance_exchange = exchange
+            recent.append(exchange)
             if len(recent) > 3:
                 older = recent.pop(0)
                 matches = relevance(terms, older)
                 if matches and matches >= score:
                     score, related = matches, older
-    return {"recent": recent, "earlier": related, "stance": stance}
+    return {"recent": recent, "earlier": related, "stance": stance, "stance_exchange": stance_exchange}
 
 
 def asks_for_recall(text):
@@ -112,6 +117,14 @@ def talk(store, revision, text, *, model=None, token=None):
                 reply = f"그때 네가 ‘{match['player']}’라고 했지."
             else:
                 reply = "어떤 얘기였는지 조금 더 말해 줄래? 정확히 떠오르지 않아."
+        elif text.strip(" .!?") == "경비대원이 되겠다는 네 꿈이 우스워":
+            reply = "웃을 일이야? 난 진지해. 오늘은 여기까지만 얘기하고 싶어."
+            mood, stance = "서운함", "거리 두기"
+        elif history["stance"] == "거리 두기" and text.strip(" .!?") in ("미안해", "아까 한 말 미안해"):
+            reply = "사과해 줘서 고마워. 그래도 마음이 금방 풀리진 않네."
+            stance = "조심스러움"
+        elif history["stance"] == "거리 두기" and text.strip(" .!?") == "안녕":
+            reply = "안녕. 지금은 내 일을 좀 하고 싶어."
         elif text.strip(" .!?") == "말하기 싫으면 안 해도 돼":
             reply = "고마워. 그 얘기는 내가 준비됐을 때 먼저 꺼내고 싶어."
             mood, stance = "안도", "편안함"
@@ -156,7 +169,7 @@ shared_history에서 player는 상대가 한 말, rana는 자신이 한 말이�
 질문과 관련된 기억이 없거나 어느 대화인지 모호하면 되묻는다. 모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
 라나가 실제 대화로 감정이 바뀐 경우에만 mood(차분함/기쁨/서운함/안도/당황)를,
 상대에게 대하는 태도가 달라진 경우에만 stance(조심스러움/편안함/거리 두기)를 추가한다.
-태도는 그때의 대화 태도다. 호의에 자동으로 보상하거나 연애나 결혼을 확정하지 않는다.
+stance_exchange는 지금의 태도로 바뀌었을 때 둘이 주고받은 말이다. 다음 만남의 말투와 거리감에 반영하되 매번 먼저 그 일을 꺼내지는 않는다. 사과를 들어도 라나가 마음을 풀기까지 시간이 걸릴 수 있다. 호의에 자동으로 보상하거나 연애나 결혼을 확정하지 않는다.
 JSON 객체 하나에 npc_id는 BRENA-RANA, speech는 라나의 대사만 담는다."""
 
 

@@ -21,6 +21,8 @@ on:
       - tools/patch_brena_rana_portrait.py
       - tools/stage_approved_rana_portrait.py
       - tools/stage_rana_dialogue.py
+      - tools/stage_rana_plan_check.py
+      - tools/plan_check/**
       - assets/characters/rana/**
       - tools/audit_brena_vn_apk.py
       - prototype/**
@@ -30,6 +32,8 @@ on:
     paths:
       - tools/android_emulator_smoke.sh
       - tools/stage_rana_dialogue.py
+      - tools/stage_rana_plan_check.py
+      - tools/plan_check/**
       - .github/workflows/android-runtime-emulator.yml
   workflow_dispatch:
 
@@ -107,6 +111,8 @@ jobs:
           assert npc_view(BrenaWorld.new(), 'rana').npc_id == 'rana'
           print('BRENA_APK_SOURCE_STAGED=PASS')
           PY
+          python tools/stage_rana_plan_check.py src plan-check
+          python tools/plan_check/stage_emulator_probe.py plan-check
           python - <<'PY'
           from pathlib import Path
           java=Path('src/android_native/app/src/main/java/com/ailivingworld/mobile/MainActivity.java')
@@ -186,6 +192,8 @@ jobs:
             echo "::warning::HTTP 429; waiting ${wait_seconds}s before retry."
             sleep "$wait_seconds"
           done
+      - name: Compile isolated x86 subscription candidate with synthetic identity fixture
+        run: gradle -p plan-check :app:assembleRelease --no-daemon
       - name: Verify x86_64 emulator APK contains Rana UI and Python bridge
         run: python tools/audit_brena_vn_apk.py src src/android_native/app/build/outputs/apk/debug/app-debug.apk
       # The 2026-11-23 run failed before Android boot: emulator FATAL said
@@ -222,7 +230,9 @@ jobs:
           emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader -no-metrics -partition-size 2048 -memory 1536
           emulator-boot-timeout: 900
           disable-animations: true
-          script: bash tools/android_emulator_smoke.sh
+          script: |
+            bash tools/android_emulator_smoke.sh
+            bash tools/plan_check/emulator_smoke.sh
       # The emulator runner can fail before the smoke script executes. Capture
       # host-side evidence even when there is no adb device or screenshot.
       - name: Capture emulator boot failure evidence

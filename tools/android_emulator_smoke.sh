@@ -444,7 +444,18 @@ after=json.loads((p/'alw-state-after-observation.json').read_text())
 assert before==after, 'Read-only Rana observation mutated persisted world state'
 print('EMULATOR_RANA_OBSERVATION_READ_ONLY=PASS')
 PY
-adb shell screencap -p /sdcard/alw-rana-observation-result.png
-adb pull /sdcard/alw-rana-observation-result.png "$RUNNER_TEMP/alw-rana-observation-result.png" > /dev/null
+# Capture a fresh final frame over adb. A failed transfer must not invalidate
+# the successful state check or leave an old screenshot marked as current.
+screenshot="$RUNNER_TEMP/alw-rana-observation-result.png"
+for attempt in 1 2 3; do
+  if adb exec-out screencap -p > "$screenshot.pending" &&
+     python -c 'import sys; from pathlib import Path; data=Path(sys.argv[1]).read_bytes(); sys.exit(0 if data.startswith(bytes.fromhex("89504e470d0a1a0a")) and data.endswith(bytes.fromhex("0000000049454e44ae426082")) else 1)' "$screenshot.pending"; then
+    mv "$screenshot.pending" "$screenshot"
+    break
+  fi
+  echo "::warning::Final Android screenshot capture failed on attempt $attempt"
+  if [[ "$attempt" == 3 ]]; then exit 1; fi
+  sleep 2
+done
 
 echo "EMULATOR_BOOT_SMOKE=PASS"

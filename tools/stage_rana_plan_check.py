@@ -46,6 +46,8 @@ dependencies {
     implementation project(':plan-identity')
 }
 """)
+replace(main/"res/xml/network_security_config.xml", "<domain>127.0.0.1</domain>",
+        '<domain includeSubdomains="false">127.0.0.1</domain>')
 replace(main/"AndroidManifest.xml", 'android:label="AI Living World"', 'android:label="라나 구독 연결 확인"')
 java = main / "java" / package / "MainActivity.java"
 replace(java, 'login.setText("로그인")', 'login.setText("Continue with ChatGPT")')
@@ -69,3 +71,11 @@ client.write_text(s[:a] + '''    from java import jclass
 ''' + s[b:])
 replace(client, 'with urllib.request.urlopen(request, timeout=timeout) as response:',
         'from connect_once import _NoRedirect\n        with urllib.request.build_opener(_NoRedirect()).open(request, timeout=timeout) as response:')
+
+# Provide a reference for comparison against ChatGPT's account-side usage entry.
+js = main / "assets/web/app.js"
+replace(js, "      renderScene(result);\n      $('free-input').value='';", """      renderScene(result);
+      if (app.connected && submission.rana_speech) {
+        $('model-tag').textContent = model+' · 대화 '+result.world.revision+' · '+new Date().toLocaleTimeString('ko-KR');
+      }
+      $('free-input').value='';""")

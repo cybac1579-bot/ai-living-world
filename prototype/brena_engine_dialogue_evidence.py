@@ -23,6 +23,8 @@ def npc_dialogue_evidence(state: dict[str, Any], npc_id: str) -> dict[str, Any]:
     for memory in memories[-20:]:
         if not isinstance(memory, dict):
             continue
+        if str(memory.get("id", "")).startswith("brena-talk-stance-"):
+            continue  # Supplied separately as Rana's stance, never as spoken words.
         text = memory.get("text")
         if isinstance(text, str) and text.strip():
             firsthand.append({"text": text, "revision": memory.get("revision")})

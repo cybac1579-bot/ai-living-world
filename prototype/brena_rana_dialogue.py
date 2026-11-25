@@ -34,6 +34,10 @@ def shared_history(store, revision, question):
             beats = scene.get("beats", [])
             if not spoken or len(beats) != 1 or beats[0].get("speaker_id") != RANA:
                 continue
+            if not any(event.get("npc_id") == RANA and
+                       event.get("memory_id") == PREFIX + str(row["after_revision"]) and
+                       event.get("text") == spoken for event in output["events"]):
+                continue
             for event in output["events"]:
                 if event.get("memory_id", "").startswith(STANCE_PREFIX):
                     stance = event["text"]

@@ -51,6 +51,7 @@ def shared_history(store, revision, question):
     score = 0
     stance = None
     stance_exchange = None
+    distance_exchange = None
     terms = topic_terms(question)
     with store.journal.open(encoding="utf-8") as journal:
         for _ in range(revision):
@@ -72,6 +73,10 @@ def shared_history(store, revision, question):
                 if (event.get("type") == "npc_remember" and event.get("npc_id") == RANA
                         and event.get("memory_id") == STANCE_PREFIX + str(row["after_revision"])
                         and event.get("text") in STANCES):
+                    # Keep the preceding boundary while Rana is still cautious.
+                    distance_exchange = stance_exchange if (
+                        stance == "거리 두기" and event["text"] == "조심스러움"
+                    ) else None
                     stance = event["text"]
                     stance_exchange = exchange
             recent.append(exchange)
@@ -80,7 +85,8 @@ def shared_history(store, revision, question):
                 matches = relevance(terms, older)
                 if matches and matches >= score:
                     score, related = matches, older
-    return {"recent": recent, "earlier": related, "stance": stance, "stance_exchange": stance_exchange}
+    return {"recent": recent, "earlier": related, "stance": stance, "stance_exchange": stance_exchange,
+            "distance_exchange": distance_exchange}
 
 
 def asks_for_recall(text):
@@ -125,6 +131,8 @@ def talk(store, revision, text, *, model=None, token=None):
             stance = "조심스러움"
         elif history["stance"] == "거리 두기" and text.strip(" .!?") == "안녕":
             reply = "안녕. 지금은 내 일을 좀 하고 싶어."
+        elif history["distance_exchange"] and text.strip(" .!?") == "안녕":
+            reply = "안녕. 잠깐 얘기할까? 내 얘기는 천천히 하고 싶어."
         elif text.strip(" .!?") == "말하기 싫으면 안 해도 돼":
             reply = "고마워. 그 얘기는 내가 준비됐을 때 먼저 꺼내고 싶어."
             mood, stance = "안도", "편안함"
@@ -169,6 +177,7 @@ shared_history에서 player는 상대가 한 말, rana는 자신이 한 말이�
 질문과 관련된 기억이 없거나 어느 대화인지 모호하면 되묻는다. 모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.
 라나가 실제 대화로 감정이 바뀐 경우에만 mood(차분함/기쁨/서운함/안도/당황)를,
 상대에게 대하는 태도가 달라진 경우에만 stance(조심스러움/편안함/거리 두기)를 추가한다.
+distance_exchange가 있으면 라나가 앞서 거리를 뒀을 때 실제로 오간 말이다. 이후의 사과나 대화와 순서를 구분한다.
 stance_exchange는 지금의 태도로 바뀌었을 때 둘이 주고받은 말이다. 다음 만남의 말투와 거리감에 반영하되 매번 먼저 그 일을 꺼내지는 않는다. 사과를 들어도 라나가 마음을 풀기까지 시간이 걸릴 수 있다. 호의에 자동으로 보상하거나 연애나 결혼을 확정하지 않는다.
 JSON 객체 하나에 npc_id는 BRENA-RANA, speech는 라나의 대사만 담는다."""
 

@@ -107,7 +107,7 @@ def patch(path: Path) -> None:
       for (const minutes of new Set([10,untilHour])) {
         const advanceBtn=document.createElement('button');
         advanceBtn.type='button';
-        advanceBtn.textContent=minutes===10?'10분 보내기':('다음 정각까지 · '+minutes+'분');
+        advanceBtn.textContent=minutes===10?'시간 10분 진행':('다음 정각까지 · '+minutes+'분');
         advanceBtn.style.cssText='';
         advanceBtn.disabled=sending;
         advanceBtn.addEventListener('click',()=>{

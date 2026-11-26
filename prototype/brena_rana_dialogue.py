@@ -17,7 +17,7 @@ STANCE_PREFIX = "brena-talk-stance-"
 
 
 # Common recall wording carries no evidence about which conversation was meant.
-RECALL_FILLER = set("전에 예전 예전에 지난번 지난번에 저번 저번에 아까 그때 우리 우리가 내가 네가 니가 너가 라나 라나가 라나는 했던 했었지 말 말한 얘기 얘기한 이야기 이야기한 혹시 아직 기억 기억해 기억나 기억하니 기억하고 있어 했지 뭐라고 뭐였지 대해 대해서 관해 관련해서".split())
+RECALL_FILLER = set("전에 예전 예전에 지난번 지난번에 저번 저번에 아까 그때 우리 우리가 내가 네가 니가 너가 라나 라나가 라나는 했던 했었지 말 말한 얘기 얘기한 이야기 이야기한 혹시 아직 기억 기억해 기억나 기억하니 기억하고 있어 했지 했었어 했어 했더라 했었더라 대답했지 답했지 뭐라고 뭐였지 대해 대해서 관해 관련해서".split())
 KOREAN_ENDINGS = ("이셨어요", "이셨어", "이었어", "였어", "에서는", "에게는", "으로는", "이라는", "이랑", "에서", "에게", "으로", "하고",
              "에는", "은", "는", "이", "가", "을", "를", "과", "와", "도")
 
@@ -53,6 +53,7 @@ def shared_history(store, revision, question):
     stance_exchange = None
     distance_exchange = None
     terms = topic_terms(question)
+    recall_without_topic = not terms and asks_for_recall(question)
     with store.journal.open(encoding="utf-8") as journal:
         for _ in range(revision):
             row = json.loads(next(journal))
@@ -83,14 +84,19 @@ def shared_history(store, revision, question):
             if len(recent) > 3:
                 older = recent.pop(0)
                 matches = relevance(terms, older)
-                if matches and matches >= score:
+                if recall_without_topic and not asks_for_recall(older["player"]):
+                    related = older
+                elif matches and matches >= score:
                     score, related = matches, older
     return {"recent": recent, "earlier": related, "stance": stance, "stance_exchange": stance_exchange,
             "distance_exchange": distance_exchange}
 
 
 def asks_for_recall(text):
-    return any(phrase in text for phrase in ("기억해", "기억나", "기억하니", "기억하고 있", "전에 했던 말"))
+    phrases = ("기억해", "기억나", "기억하니", "기억하고 있", "전에 했던 말")
+    return any(phrase in text for phrase in phrases) or bool(
+        re.search(r"뭐라고\s*(?:했지|했더라|했었지|답했지|대답했지)", text)
+    )
 
 
 def talk(store, revision, text, *, model=None, token=None):
@@ -105,7 +111,6 @@ def talk(store, revision, text, *, model=None, token=None):
         evidence = npc_dialogue_evidence(state, RANA)
     except PermissionError as exc:
         raise WorldError("라나와 같은 장소에서 말을 걸어줘.") from exc
-    memories = state["npcs"][RANA].get("memories", [])
     place = state["regions"][evidence["place_id"]]["name"]
     activity = evidence["activity_id"]
     evidence["npc_name"] = "라나"  # Older saves inherited the demo guide name.
@@ -113,14 +118,24 @@ def talk(store, revision, text, *, model=None, token=None):
     routine = rana_status_payload(state)
     mood = stance = None
     if model is None:
-        reply = preview_reply(text, memories, place, activity)
-        if asks_for_recall(text) and topic_terms(text):
+        if asks_for_recall(text):
             candidates = ([history["earlier"]] if history["earlier"] else []) + history["recent"]
             terms = topic_terms(text)
             # Equal evidence favors the newer exchange.
-            match = max(reversed(candidates), key=lambda turn: relevance(terms, turn), default=None)
-            if match and relevance(terms, match):
-                reply = f"그때 네가 ‘{match['player']}’라고 했지."
+            if terms:
+                match = max(reversed(candidates), key=lambda turn: relevance(terms, turn), default=None)
+                if match and not relevance(terms, match):
+                    match = None
+            else:
+                match = next((turn for turn in reversed(candidates) if not asks_for_recall(turn["player"])), None)
+            if match:
+                if re.search(r"(?:네가|니가|너가|라나가)\s+(?:했던 말|한 말|뭐라고)", text):
+                    quote = match["rana"]
+                    if len(quote) > 400:
+                        quote = quote[:399] + "…"
+                    reply = f"그때 나는 이렇게 말했어. ‘{quote}’"
+                else:
+                    reply = f"그때 네가 ‘{match['player']}’라고 했지."
             else:
                 reply = "어떤 얘기였는지 조금 더 말해 줄래? 정확히 떠오르지 않아."
         elif text.strip(" .!?") == "경비대원이 되겠다는 네 꿈이 우스워":
@@ -138,6 +153,8 @@ def talk(store, revision, text, *, model=None, token=None):
             mood, stance = "안도", "편안함"
         elif text.strip(" .!?") == "오늘은 무슨 일을 해" and routine.get("routine_detail"):
             reply = routine["routine_detail"]
+        else:
+            reply = preview_reply(text, place, activity)
     else:
         from live_story import request_story
         context = {"world_id": state["world_id"], "place": place, "npc": evidence,
@@ -182,15 +199,8 @@ stance_exchange는 지금의 태도로 바뀌었을 때 둘이 주고받은 말�
 JSON 객체 하나에 npc_id는 BRENA-RANA, speech는 라나의 대사만 담는다."""
 
 
-def preview_reply(text, memories, place, activity):
-    if asks_for_recall(text):
-        previous = next(
-            (m["text"] for m in reversed(memories)
-             if m["id"].startswith(PREFIX) and not m["id"].startswith(STANCE_PREFIX) and not asks_for_recall(m["text"])),
-            None,
-        )
-        reply = f"응. 지난번에 ‘{previous}’라고 했지. 그 얘기를 더 하고 싶어?" if previous else "우리가 전에 나눈 말은 아직 떠오르지 않아. 들려줄래?"
-    elif any(word in text for word in ("경비대", "경비병")):
+def preview_reply(text, place, activity):
+    if any(word in text for word in ("경비대", "경비병")):
         reply = "경비대에 들어가고 싶어. 창을 잘 쓰는 것만으로는 부족하대. 그래도 해 볼 거야."
     elif "촌장" in text:
         reply = "촌장님이 내 꿈을 응원해 주시는 건 알아. 그래도 마을에서 오래 지킨 관습이라시니, 어떻게 다시 말을 꺼낼지 고민이야."

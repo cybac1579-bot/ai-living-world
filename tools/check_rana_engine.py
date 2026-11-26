@@ -179,3 +179,14 @@ with tempfile.TemporaryDirectory() as directory:
     history = shared_history(store, store.load()["revision"], "")
     assert history["stance"] == "편안함" and history["distance_exchange"] is None
     print("PASS later model turn retains both conflict and apology, then retires the old tone")
+
+    # The two sides of an exchange stay distinct even after several recall requests.
+    bridge = StoryBridge(EventStore(Path(directory)))
+    for question in ("아까 내가 뭐라고 했지?", "아까 네가 뭐라고 했지?") * 3:
+        speak(store.load()["revision"], question)
+        line = bridge.page_state()["world"]["beats"][0]["text"]
+        expected = "잠깐 이야기할까?" if "내가" in question else "응, 오늘은 얘기할 수 있어."
+        assert expected in line, line
+    speak(store.load()["revision"], "경비대장은 그때 네가 뭐라고 했지?")
+    assert "우리 아버지" in bridge.page_state()["world"]["beats"][0]["text"]
+    print("PASS Rana recalls her own answer or the player’s words after intervening recall requests")

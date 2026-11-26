@@ -58,7 +58,11 @@ def run(page, private, assets):
         catalog=lambda **_: ("test-only", [{"slug":"test-model"}]))
     page.goto(url)
     page.get_by_role("button", name="선택지 보기").click()
+    page.get_by_role("button", name="직접 행동하기").click()
+    expect(page.locator("#free-input")).to_have_attribute("maxlength", "1000")
+    page.locator("#close-sheet").click()
     page.get_by_role("button", name="라나에게 말하기").click()
+    expect(page.locator("#free-input")).to_have_attribute("maxlength", "600")
     page.locator("#free-input").fill("오늘은 무슨 일을 해?")
     with patch("live_story.request_story", return_value=json.dumps({
         "npc_id":"BRENA-RANA", "speech":"잠시 쉬고 있었어."

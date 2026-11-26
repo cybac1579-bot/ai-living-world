@@ -60,7 +60,7 @@ def stage(root):
     for web in (root/"web", android/"assets/web"):
         js = web/"app.js"
         replace(js, '    const rana=app.brena && app.brena.rana;', '''    const rana=app.brena && app.brena.rana;
-    const canTalk = !app.connected && rana && rana.player_present === true;
+    const canTalk = rana && rana.player_present === true;
     $('free-toggle').textContent = canTalk ? '라나에게 말하기' : '직접 입력하기';
     $('free-input').maxLength = canTalk ? 600 : 1000;
     $('free-input').placeholder = canTalk ? '라나에게 하고 싶은 말' : '하고 싶은 행동';
@@ -84,12 +84,18 @@ def stage(root):
     }""")
         replace(js, "$('choices').replaceChildren();", """$('choices').replaceChildren();
     if (app.connected && app.brena?.rana?.player_present) {
-      const talk=document.createElement('button');
-      talk.type='button';
-      talk.textContent='라나에게 말하기';
-      talk.addEventListener('click',()=>setSheet('rana'));
-      $('choices').append(talk);
+      const action=document.createElement('button');
+      action.type='button';
+      action.textContent='직접 행동하기';
+      action.addEventListener('click',()=>setSheet('free'));
+      $('choices').append(action);
     }""")
+        replace(js, "setSheet(sheet==='free'?'':'free')", """{
+      const target=app.connected && app.brena?.rana?.player_present?'rana':'free';
+      setSheet(sheet===target?'':target);
+    }""")
+        replace(js, "setAttribute('aria-expanded',next==='free')",
+                "setAttribute('aria-expanded',next===(app.connected && app.brena?.rana?.player_present?'rana':'free'))")
         replace(js, 'sendTurn({free_text:text});', "sendTurn(sheet==='rana'?{rana_speech:text}:{free_text:text});")
         replace(js, "if (!(app.world.choices||[]).length)", "if (!$('choices').childElementCount)")
         replace(web/"index.html","원하는 행동을 직접 입력해","전달할 내용")

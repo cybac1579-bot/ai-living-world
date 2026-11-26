@@ -49,6 +49,23 @@ with tempfile.TemporaryDirectory() as directory:
         (private/"saves/DEMO/state.json").unlink(missing_ok=True)
         base = start()
         assert question in say(2,"지난번 말 기억해?")["text"]
+        def wait(revision, minutes):
+            return post("/api/brena/advance-time", revision=revision, minutes=minutes)["world"]
+        assert wait(3, 10)["world_minutes"] == 10
+        for revision, minutes in ((4, 60), (3, 50)):
+            try:
+                wait(revision, minutes)
+            except HTTPError as exc:
+                assert exc.code == 422
+            else:
+                raise AssertionError("invalid or stale wait accepted")
+        assert wait(4, 50)["world_minutes"] == 60
+        assert wait(5, 60)["world_minutes"] == 120
+        mobile_embedded.stop_engine()
+        base = start()
+        resumed = json.load(client.open(base+"/api/state"))["world"]
+        assert resumed["world_minutes"] == 120 and resumed["revision"] == 6
+        print("PASS explicit next-hour wait, stale and oversized rejection, persisted clock")
         print("PASS Android embedded HTTP boot, travel, speech, portrait, restart and recall")
     finally:
         mobile_embedded.stop_engine()

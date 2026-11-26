@@ -190,3 +190,31 @@ with tempfile.TemporaryDirectory() as directory:
     speak(store.load()["revision"], "경비대장은 그때 네가 뭐라고 했지?")
     assert "우리 아버지" in bridge.page_state()["world"]["beats"][0]["text"]
     print("PASS Rana recalls her own answer or the player’s words after intervening recall requests")
+
+with tempfile.TemporaryDirectory() as directory:
+    store = EventStore(Path(directory))
+    store.create(json.loads((android/"assets/examples/brena_initial_world.json").read_text()))
+    # The player stays in the square while Rana goes to the store.
+    for revision in range(18):
+        state = store.commit(revision, None, {"events":[{"type":"world_advance","minutes":10}]},
+                             mode="brena_world_tick")
+    assert state["player"]["location"] == "BRENA-SQUARE"
+    npc = state["npcs"]["BRENA-RANA"]
+    assert npc["location"] == "BRENA-GENERAL-STORE"
+    log = npc["brena_routine_history"]
+    assert log[-1] == {"day":1, "minute":660, "place_id":npc["location"], "activity_id":"help_villagers"}
+    store.cache.unlink()
+    store = EventStore(Path(directory))
+    store.commit(18, {"destination":npc["location"]}, {"events":[]}, mode="player_travel")
+    bridge = StoryBridge(store)
+    speak(19, "그동안 뭐 했어?")
+    line = bridge.page_state()["world"]["beats"][0]["text"]
+    assert "오늘 11시" in line and "잡화점" in line and "일손" in line
+    connected = StoryBridge(store, token="test-only", models=[{"slug":"test-model"}])
+    with patch("live_story.request_story", return_value=json.dumps({
+        "npc_id":"BRENA-RANA", "speech":"응, 아까 일손을 좀 거들었어."
+    })) as model:
+        connected.turn(dict(revision=20, model="test-model", approve=True,
+                            submission={"rana_speech":"그 일은 어디서 했어?"}))
+        assert model.call_args.args[2]["routine_history"] == log
+    print("PASS Rana recalls independent activity at the store after separation and restart")

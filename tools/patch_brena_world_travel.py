@@ -73,6 +73,17 @@ def patch(path: Path) -> None:
                 npc = result["npcs"][npc_id]
                 if npc["location"] == place_to_region.get(resident.place):
                     npc["brena_activity"] = resident.activity
+                    if resident_id == "rana":
+                        entry = {"day": projected.day, "minute": projected.minute,
+                                 "place_id": npc["location"], "activity_id": resident.activity}
+                        log = npc.setdefault("brena_routine_history", [])
+                        if (log and log[-1]["day"] == entry["day"]
+                                and log[-1]["place_id"] == entry["place_id"]
+                                and log[-1]["activity_id"] == entry["activity_id"]):
+                            log[-1] = entry
+                        else:
+                            log.append(entry)
+                            del log[:-8]
                 else:
                     npc.pop("brena_activity", None)
         result["revision"] += 1

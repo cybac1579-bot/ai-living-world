@@ -103,32 +103,35 @@ def patch(path: Path) -> None:
     }
     timeActions.replaceChildren();
     if (validClock) {
-      const advanceBtn=document.createElement('button');
-      advanceBtn.type='button';
-      advanceBtn.textContent='시간 10분 진행';
-      advanceBtn.style.cssText='';
-      advanceBtn.disabled=sending;
-      advanceBtn.addEventListener('click',()=>{
-        if (sending || !app || !app.world || !app.csrf) return;
-        if (!window.confirm('게임 시간을 10분 진행할까?')) return;
-        sending=true;
-        advanceBtn.disabled=true;
-        fetch('/api/brena/advance-time',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','X-ALW-CSRF':app.csrf},
-          body:JSON.stringify({revision:app.world.revision,minutes:10})
-        }).then(async res=>{
-          const data=await res.json();
-          if (!res.ok) throw new Error(data.error||'시간 진행 실패');
-          sending=false;
-          renderScene(data);
-        }).catch(async err=>{
-          notify('시간 진행 상태를 다시 확인해줘: '+String(err.message||err));
-          sending=false;
-          try {const res=await fetch('/api/state',{cache:'no-store'});if(res.ok)renderScene(await res.json());}catch(_e){}
-        }).finally(()=>{sending=false;});
-      });
-      timeActions.appendChild(advanceBtn);
+      const untilHour=60-clock.minute%60;
+      for (const minutes of new Set([10,untilHour])) {
+        const advanceBtn=document.createElement('button');
+        advanceBtn.type='button';
+        advanceBtn.textContent=minutes===10?'10분 보내기':('다음 정각까지 · '+minutes+'분');
+        advanceBtn.style.cssText='';
+        advanceBtn.disabled=sending;
+        advanceBtn.addEventListener('click',()=>{
+          if (sending || !app || !app.world || !app.csrf) return;
+          if (!window.confirm('게임 시간을 '+minutes+'분 진행할까?')) return;
+          sending=true;
+          advanceBtn.disabled=true;
+          fetch('/api/brena/advance-time',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-ALW-CSRF':app.csrf},
+            body:JSON.stringify({revision:app.world.revision,minutes})
+          }).then(async res=>{
+            const data=await res.json();
+            if (!res.ok) throw new Error(data.error||'시간 진행 실패');
+            sending=false;
+            renderScene(data);
+          }).catch(async err=>{
+            notify('시간 진행 상태를 다시 확인해줘: '+String(err.message||err));
+            sending=false;
+            try {const res=await fetch('/api/state',{cache:'no-store'});if(res.ok)renderScene(await res.json());}catch(_e){}
+          }).finally(()=>{sending=false;});
+        });
+        timeActions.appendChild(advanceBtn);
+      }
     }
     timeActions.hidden=!validClock;
     const rana=app.brena && app.brena.rana;

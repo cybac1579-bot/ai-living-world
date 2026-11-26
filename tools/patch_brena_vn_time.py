@@ -1,4 +1,4 @@
-"""Add player-requested ten-minute world advancement through original EventStore.
+"""Add player-requested world advancement through original EventStore.
 
 No wall-clock scheduling, no AI-generated player action, no second time authority.
 """
@@ -19,16 +19,19 @@ def patch(path: Path) -> None:
                 payload = json.loads(self.rfile.read(size))
                 if not isinstance(payload, dict) or set(payload) != {"revision", "minutes"}:
                     raise WorldError("시간 진행 요청 구조가 올바르지 않아.")
-                if type(payload["minutes"]) is not int or payload["minutes"] != 10:
-                    raise WorldError("현재는 10분 진행만 허용해.")
+                if type(payload["minutes"]) is not int:
+                    raise WorldError("시간 진행 간격이 올바르지 않아.")
                 if not self.server.bridge.turn_lock.acquire(blocking=False):
                     raise WorldError("이미 처리 중인 행동이 있어.")
                 try:
                     state = self.server.bridge.store.load()
                     if type(payload["revision"]) is not int or state["revision"] != payload["revision"]:
                         raise WorldError("화면이 오래됐어. 다시 불러와줘.")
+                    minutes = payload["minutes"]
+                    if minutes not in (10, 60 - state.get("world_minutes", 0) % 60):
+                        raise WorldError("10분 또는 다음 정각까지 진행할 수 있어.")
                     self.server.bridge.store.commit(state["revision"], None,
-                        {"events": [{"type": "world_advance", "minutes": 10}]}, mode="brena_world_tick")
+                        {"events": [{"type": "world_advance", "minutes": minutes}]}, mode="brena_world_tick")
                 finally:
                     self.server.bridge.turn_lock.release()
                 return self._respond(200, self.server.bridge.page_state())

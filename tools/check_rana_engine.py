@@ -218,3 +218,32 @@ with tempfile.TemporaryDirectory() as directory:
                             submission={"rana_speech":"그 일은 어디서 했어?"}))
         assert model.call_args.args[2]["routine_history"] == log
     print("PASS Rana recalls independent activity at the store after separation and restart")
+
+    speak(21, "어제는 뭐 했어?")
+    assert "떠오르지" in bridge.page_state()["world"]["beats"][0]["text"]
+    for revision in range(22, 54):
+        state = store.commit(revision, None, {"events":[{"type":"world_advance","minutes":60}]},
+                             mode="brena_world_tick")
+    npc = state["npcs"]["BRENA-RANA"]
+    assert all(entry["day"] == 2 for entry in npc["brena_routine_history"])
+    archived = npc["brena_previous_day"]
+    assert archived and all(entry["day"] == 1 for entry in archived)
+    store.cache.unlink()
+    store = EventStore(Path(directory))
+    bridge = StoryBridge(store)
+    if state["player"]["location"] != npc["location"]:
+        store.commit(state["revision"], {"destination":"BRENA-SQUARE"}, {"events":[]}, mode="player_travel")
+        if npc["location"] != "BRENA-SQUARE":
+            store.commit(store.load()["revision"], {"destination":npc["location"]}, {"events":[]}, mode="player_travel")
+    for question, prefix in (("어제는 뭐 했어?", "어제"), ("오늘은 뭐했어?", "오늘")):
+        speak(store.load()["revision"], question)
+        assert bridge.page_state()["world"]["beats"][0]["text"].startswith(prefix)
+    connected = StoryBridge(store, token="test-only", models=[{"slug":"test-model"}])
+    with patch("live_story.request_story", return_value=json.dumps({
+        "npc_id":"BRENA-RANA", "speech":"어제 일을 묻는구나."
+    })) as model:
+        connected.turn(dict(revision=store.load()["revision"], model="test-model", approve=True,
+                            submission={"rana_speech":"어제 뭐 했어?"}))
+        context = model.call_args.args[2]
+        assert context["routine_history"] == archived and context["requested_routine_day"] == 1
+    print("PASS previous-day recall after eviction and restart, no invented day-one backstory")

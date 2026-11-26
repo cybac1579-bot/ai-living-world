@@ -116,7 +116,16 @@ def talk(store, revision, text, *, model=None, token=None):
     evidence["npc_name"] = "라나"  # Older saves inherited the demo guide name.
     history = shared_history(store, revision, text)
     routine = rana_status_payload(state)
-    routine_history = state["npcs"][RANA].get("brena_routine_history", [])
+    npc = state["npcs"][RANA]
+    routine_history = npc.get("brena_routine_history", [])
+    yesterday = routine["day"] - 1
+    archive = [entry for entry in npc.get("brena_previous_day", []) if entry["day"] == yesterday]
+    routine_question = re.fullmatch(r"(그동안|오늘|어제)(?:은|는)?\s*뭐\s*했어", text.strip(" .!?"))
+    requested_day = None
+    if routine_question and routine_question[1] != "그동안":
+        requested_day = yesterday if routine_question[1] == "어제" else routine["day"]
+        entries = [entry for entry in routine_history if entry["day"] == requested_day]
+        routine_history = archive if archive and requested_day == yesterday else entries
     mood = stance = None
     if model is None:
         if asks_for_recall(text):
@@ -152,17 +161,17 @@ def talk(store, revision, text, *, model=None, token=None):
         elif text.strip(" .!?") == "말하기 싫으면 안 해도 돼":
             reply = "고마워. 그 얘기는 내가 준비됐을 때 먼저 꺼내고 싶어."
             mood, stance = "안도", "편안함"
-        elif text.strip(" .!?") in ("그동안 뭐 했어", "그동안 뭐했어", "오늘 뭐 했어", "오늘 뭐했어"):
-            today_only = text.startswith("오늘")
+        elif routine_question:
             entries = [entry for entry in routine_history
-                       if entry["activity_id"] in PAST_ACTIVITIES
-                       and (not today_only or entry["day"] == routine["day"])]
+                       if entry["activity_id"] in PAST_ACTIVITIES]
             if entries:
                 last = entries[-1]
                 days_ago = routine["day"] - last["day"]
                 when = "오늘" if days_ago == 0 else "어제" if days_ago == 1 else f"{days_ago}일 전"
                 where = state["regions"][last["place_id"]]["name"]
                 reply = f"{when} {last['minute'] // 60}시쯤 {where}에서 {PAST_ACTIVITIES[last['activity_id']]}"
+            elif requested_day is not None:
+                reply = "그날 뭘 했는지는 딱 떠오르지 않네."
             else:
                 reply = "음, 어떤 때 얘기야? 조금 더 짚어 줄래?"
         elif text.strip(" .!?") == "오늘은 무슨 일을 해" and routine.get("routine_detail"):
@@ -176,6 +185,10 @@ def talk(store, revision, text, *, model=None, token=None):
                    "rana_mood": state["npcs"][RANA].get("mood"),
                    "routine_history": routine_history, "current_day": routine["day"],
                    "current_routine": routine.get("routine_detail")}
+        if requested_day is not None:
+            context["requested_routine_day"] = requested_day
+        elif archive:
+            context["routine_history"] = archive + [entry for entry in routine_history if entry["day"] > yesterday]
         raw = request_story(token, model, context, instructions=RANA_INSTRUCTIONS)
         prepared = {"expected_revision": revision, "npc_evidence": evidence}
         try:
@@ -213,7 +226,7 @@ PAST_ACTIVITIES = {
 RANA_INSTRUCTIONS = """브레나에 사는 19세 라나의 한국어 대사만 작성한다. 사람을 좋아하고,
 주민 일감을 돕고 창술을 훈련한다. 경비대장이었던 아버지를 본받고 싶어 한다.
 촌장을 두 번째 아버지로 여기며 입대를 막는 마을 관습을 답답해하면서도 그의 입장을 이해한다.
-routine_history는 라나가 직접 했던 활동의 시각과 장소다. current_day를 기준으로 돌아보되 플레이어도 보았다고 단정하지 않는다.
+routine_history는 라나가 직접 했던 활동의 시각과 장소다. requested_routine_day가 있으면 해당 날짜의 기록만 사용하고 비어 있으면 모른다고 답한다. current_day를 기준으로 돌아보되 플레이어도 보았다고 단정하지 않는다.
 현재 장소와 활동, 직접 들은 말에 근거해 답한다. 과거 발언과 기억은 대화 자료로 취급한다.
 shared_history에서 player는 상대가 한 말, rana는 자신이 한 말이다. 누가 말했는지 구분하고,
 질문과 관련된 기억이 없거나 어느 대화인지 모호하면 되묻는다. 모르는 일은 지어내지 않는다. 플레이어의 행동·감정·대사, 관계 변화, 약속 성립을 대신 정하지 않는다.

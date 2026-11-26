@@ -77,6 +77,10 @@ def patch(path: Path) -> None:
                         entry = {"day": projected.day, "minute": projected.minute,
                                  "place_id": npc["location"], "activity_id": resident.activity}
                         log = npc.setdefault("brena_routine_history", [])
+                        if log and log[-1]["day"] != entry["day"]:
+                            npc["brena_previous_day"] = [
+                                item for item in log if item["day"] == entry["day"] - 1
+                            ]
                         if (log and log[-1]["day"] == entry["day"]
                                 and log[-1]["place_id"] == entry["place_id"]
                                 and log[-1]["activity_id"] == entry["activity_id"]):

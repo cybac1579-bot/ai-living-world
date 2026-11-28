@@ -77,6 +77,11 @@ jobs:
 
       - name: Stage isolated subscription verification app
         run: python tools/stage_rana_plan_check.py src plan-check
+      - name: Verify travel after a Rana reply in the subscription UI
+        run: |
+          python -m pip install playwright
+          python tools/check_rana_travel_ui.py plan-check
+
       - name: Disable ChatGPT login and online GPT in this prototype APK
         run: python tools/disable_android_debug_login.py
 

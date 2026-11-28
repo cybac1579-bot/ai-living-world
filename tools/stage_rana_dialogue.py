@@ -71,6 +71,12 @@ def stage(root):
     replace(server, '    "/app.js":', '    "/assets/characters/rana/neutral.webp": ("assets/characters/rana/neutral.webp", "image/webp"),\n    "/app.js":')
     for web in (root/"web", android/"assets/web"):
         js = web/"app.js"
+        # Travel controls are rebuilt by renderScene using the current sending flag.
+        replace(js, "      renderScene(result);", "      sending=false;\n      renderScene(result);")
+        state_refresh = "if(res.ok)renderScene(await res.json());"
+        failure_path = "      try {const res=await fetch('/api/state',{cache:'no-store'});" + state_refresh + "}catch(_e){}\n    } finally"
+        replace(js, failure_path, failure_path.replace(state_refresh,
+                "if(res.ok){const state=await res.json();sending=false;renderScene(state);}"))
         replace(js, '    const rana=app.brena && app.brena.rana;', '''    const rana=app.brena && app.brena.rana;
     const canTalk = rana && rana.player_present === true;
     $('free-toggle').textContent = canTalk ? '라나에게 말하기' : '직접 입력하기';

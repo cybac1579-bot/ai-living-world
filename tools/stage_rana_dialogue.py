@@ -31,6 +31,11 @@ def stage(root):
     java = android/"java/com/ailivingworld/mobile/MainActivity.java"
     replace(java, '"web/assets/forest.jpg",', '"web/assets/forest.jpg","web/assets/characters/rana/neutral.webp",')
     server = android/"python/vn_server.py"
+    replace(server, 'import threading', 'import threading\nimport time')
+    replace(server, '        self.turn_lock = threading.Lock()',
+            '        self.last_rana_response = None\n        self.turn_lock = threading.Lock()')
+    replace(server, '            "connected": bool',
+            '            "last_rana_response": self.last_rana_response,\n            "connected": bool')
     replace(server, '        if payload["approve"] is not True:', '''        if not self.token and payload["model"] == "brena-rana" and payload["approve"] is False:
             from brena_rana_dialogue import talk
             submission = payload["submission"]
@@ -44,8 +49,13 @@ def stage(root):
             if not self.turn_lock.acquire(blocking=False):
                 raise WorldError("이미 라나가 대답하고 있어.")
             try:
-                return talk(self.store, payload["revision"], submission["rana_speech"],
-                            model=payload["model"], token=self.token)
+                result = talk(self.store, payload["revision"], submission["rana_speech"],
+                              model=payload["model"], token=self.token)
+                previous = self.last_rana_response
+                self.last_rana_response = {"count": previous["count"] + 1 if previous else 1,
+                                           "requested_model": payload["model"],
+                                           "completed_at": int(time.time())}
+                return result
             finally:
                 self.turn_lock.release()
         if not isinstance(submission, dict) or set(submission) not in''')

@@ -84,8 +84,20 @@ with tempfile.TemporaryDirectory() as directory:
                 pass
             else:
                 raise AssertionError("invalid online turn accepted")
+        assert connected.page_state()["last_rana_response"] is None
         opener.assert_not_called()
         connected.turn(payload)
+        opener.return_value.open.assert_called_once()
+        receipt = connected.page_state()["last_rana_response"]
+        assert receipt["count"] == 1 and receipt["requested_model"] == "test-model"
+        assert receipt["completed_at"] > 0
+        assert bridge.page_state()["last_rana_response"] is None
+        try:
+            connected.turn(payload)
+        except WorldError:
+            assert connected.page_state()["last_rana_response"] == receipt
+        else:
+            raise AssertionError("stale online turn counted")
         opener.return_value.open.assert_called_once()
         store.cache.unlink()
         restored = EventStore(Path(directory)).load()

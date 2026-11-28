@@ -48,23 +48,30 @@ with tempfile.TemporaryDirectory() as directory:
         mobile_embedded.stop_engine()
         (private/"saves/DEMO/state.json").unlink(missing_ok=True)
         base = start()
-        assert question in say(2,"지난번 말 기억해?")["text"]
+        restored = json.load(client.open(base+"/api/state"))["world"]
+        assert restored["beats"][0] == reply
+        for revision, destination in ((2, "BRENA-SQUARE"), (3, "BRENA-CHIEF-HOUSE")):
+            world = post("/api/brena/travel", revision=revision, destination=destination)["world"]
+            assert world["beats"] == [{"kind":"narration", "text":world["region"]["name"]}]
+        assert question in say(4,"지난번 말 기억해?")["text"]
         def wait(revision, minutes):
             return post("/api/brena/advance-time", revision=revision, minutes=minutes)["world"]
-        assert wait(3, 10)["world_minutes"] == 10
-        for revision, minutes in ((4, 60), (3, 50)):
+        after_wait = wait(5, 10)
+        assert after_wait["world_minutes"] == 10
+        assert after_wait["beats"][0]["kind"] == "narration"
+        for revision, minutes in ((6, 60), (5, 50)):
             try:
                 wait(revision, minutes)
             except HTTPError as exc:
                 assert exc.code == 422
             else:
                 raise AssertionError("invalid or stale wait accepted")
-        assert wait(4, 50)["world_minutes"] == 60
-        assert wait(5, 60)["world_minutes"] == 120
+        assert wait(6, 50)["world_minutes"] == 60
+        assert wait(7, 60)["world_minutes"] == 120
         mobile_embedded.stop_engine()
         base = start()
         resumed = json.load(client.open(base+"/api/state"))["world"]
-        assert resumed["world_minutes"] == 120 and resumed["revision"] == 6
+        assert resumed["world_minutes"] == 120 and resumed["revision"] == 8
         print("PASS explicit next-hour wait, stale and oversized rejection, persisted clock")
         print("PASS Android embedded HTTP boot, travel, speech, portrait, restart and recall")
     finally:

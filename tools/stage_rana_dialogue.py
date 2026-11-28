@@ -52,7 +52,9 @@ def stage(root):
     replace(server, '        asset = rendered.get("image") or {}', '''        for beat in rendered["beats"]:
             if beat.get("speaker", {}).get("id") == "BRENA-RANA":
                 beat["speaker"]["name"] = "라나"
-        if (rendered["scene_id"].startswith("rana-talk-") and
+        scene_id = rendered["scene_id"]
+        if scene_id.startswith("rana-talk-") and (
+                scene_id != f"rana-talk-{rendered['revision']}" or
                 engine_state["npcs"]["BRENA-RANA"]["location"] != engine_state["player"]["location"]):
             rendered["beats"] = [{"kind":"narration", "text":rendered["region"]["name"]}]
         asset = rendered.get("image") or {}''')

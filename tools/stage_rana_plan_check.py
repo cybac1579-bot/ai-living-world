@@ -82,11 +82,12 @@ replace(client, '    headers = {"Accept": "application/json"}',
 
 # Provide a reference for comparison against ChatGPT's account-side usage entry.
 js = main / "assets/web/app.js"
-replace(js, "      renderScene(result);\n      $('free-input').value='';", """      renderScene(result);
-      if (app.connected && submission.rana_speech) {
-        $('model-tag').textContent = model+' · 대화 '+result.world.revision+' · '+new Date().toLocaleTimeString('ko-KR');
-      }
-      $('free-input').value='';""")
+replace(js, "    const asset=app.world.image;", """    const last=app.last_rana_response;
+    if (app.connected && last) {
+      const when=new Date(last.completed_at * 1000).toLocaleTimeString('ko-KR');
+      $('model-tag').textContent='이번 연결에서 라나 응답 '+last.count+'회 · 마지막 '+when+' · 요청 모델 '+last.requested_model;
+    }
+    const asset=app.world.image;""")
 
 shutil.copy(fixtures / "android_plan_login.py", main / "python")
 replace(java, 'getModule("mobile_embedded");\n                module.callAttr("login",getFilesDir().getCanonicalPath(),this);\n                uiError("인증 확인 완료. GPT 플레이를 눌러줘.");',
